@@ -3,6 +3,8 @@ postgrespp
 
 postgres++ is a thin libpq wrapper that aims to make libpq easier to use.
 
+It has the following basic but time saving features:
+
 ### Asynchronous
 It provides asynchronous database operations using Boost.ASIO under the hood.
 
