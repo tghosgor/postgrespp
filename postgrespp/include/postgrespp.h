@@ -55,8 +55,11 @@ class EscapedLiteral
 	char* data_;
 
 	EscapedLiteral(char* const& data);
+	EscapedLiteral(EscapedLiteral const&) = delete;
+	EscapedLiteral& operator=(EscapedLiteral const&) = delete;
 
 public:
+	EscapedLiteral(EscapedLiteral&& o);
 	~EscapedLiteral();
 
 	char* const& c_str();

@@ -37,7 +37,12 @@ namespace postgrespp
 EscapedLiteral::EscapedLiteral(char* const& data) : data_(data)
 {};
 
-EscapedLiteral::~EscapedLiteral(){ PQfreemem(data_); }
+EscapedLiteral::EscapedLiteral(EscapedLiteral&& o)
+{
+	o.data_ = nullptr;
+}
+
+EscapedLiteral::~EscapedLiteral(){ if(data_ =! nullptr) PQfreemem(data_); }
 
 inline char* const& EscapedLiteral::c_str() { return data_; }
 
