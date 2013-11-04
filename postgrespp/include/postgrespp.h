@@ -198,6 +198,6 @@ public:
 	bool query(const char* const& query, Callback cb);
 	
 private:
-	void asyncQueryCb(boost::system::error_code const& ec, size_t const& bt, Connection* c, Callback cb);
+	void asyncQueryCb(boost::system::error_code const& ec, size_t const& bt, Connection& conn, Callback cb);
 };
 }

@@ -217,27 +217,27 @@ bool Pool::query(const char* const& query, Callback cb)
 
 	PQsendQuery(c->handle_, query);
 	c->socket_.async_read_some(boost::asio::null_buffers(), std::bind(&Pool::asyncQueryCb, this, std::placeholders::_1,
-			std::placeholders::_2, c, std::move(cb)));
+			std::placeholders::_2, std::ref(*c), std::move(cb)));
 	return true;
 }
 
-void Pool::asyncQueryCb(boost::system::error_code const& ec, size_t const& bt, Connection* c, Callback cb)
+void Pool::asyncQueryCb(boost::system::error_code const& ec, size_t const& bt, Connection& conn, Callback cb)
 {
 	PGresult* res = nullptr;
 	if(!ec)
 	{
-		auto ret = PQconsumeInput(c->handle_);
+		auto ret = PQconsumeInput(conn.handle_);
 		if(!ret)
-			std::cerr << PQerrorMessage(c->handle_) << std::endl;
+			std::cerr << PQerrorMessage(conn.handle_) << std::endl;
 		//TODO: need a self call with PQisBusy query here?
-		res = PQgetResult(c->handle_);
-		while(PQgetResult(c->handle_) != nullptr);
-		c->status_ = Connection::Status::DEACTIVE;
+		res = PQgetResult(conn.handle_);
+		while(PQgetResult(conn.handle_) != nullptr);
+		conn.status_ = Connection::Status::DEACTIVE;
 		cb(ec, {{res}});
 	}
 	else
 	{
-		c->status_ = Connection::Status::DEACTIVE;
+		conn.status_ = Connection::Status::DEACTIVE;
 		cb(boost::system::error_code(1, boost::system::system_category()), {{res}});
 	}
 	
