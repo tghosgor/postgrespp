@@ -3,7 +3,7 @@ postgres++
 
 postgres++ is a thin libpq wrapper that aims to make libpq easier to use.
 
-It has the following basic but time saving features:
+It is designed to be exteremely simple and thin. It has the following basic but time saving features:
 
 ### # _Connection Pooling_
 It has an internal connection pool with minimum and maximum connection limits and unused connection killer.
