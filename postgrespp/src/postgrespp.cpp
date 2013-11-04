@@ -47,13 +47,13 @@ EscapedLiteral::~EscapedLiteral(){ if(data_ != nullptr) PQfreemem(data_); }
 inline char* const& EscapedLiteral::c_str() { return data_; }
 
 Result::Result(PGresult* const& res) :
-		res_(res),
-		nrows_(PQntuples(res_))
+	res_(res),
+	nrows_(PQntuples(res_))
 {}
 
 Result::Result(Result&& o) :
-		res_(o.res_),
-		nrows_(o.nrows_)
+	res_(o.res_),
+	nrows_(o.nrows_)
 {
 	o.moved_ = true;
 }
@@ -85,12 +85,12 @@ void Result::reset()
 }
 
 Connection::Connection(boost::asio::io_service& is) :
-		is_(is),
-		socket_(is)
+	is_(is),
+	socket_(is)
 {}
 
 Connection::Connection(boost::asio::io_service& is, const char* const& pgconninfo) :
-		Connection(is)
+	Connection(is)
 {
 	connect(pgconninfo);
 }
@@ -140,9 +140,9 @@ PGresult* Connection::prepare(const char* const& stmtName, const char* const& qu
 }
 
 Pool::Pool(boost::asio::io_service& is, const char* const& pgconninfo, size_t n, SpawnFunctor sf):
-		is_(is),
-		pgconninfo_(pgconninfo),
-		spawnFunctor_(std::move(sf))
+	is_(is),
+	pgconninfo_(pgconninfo),
+	spawnFunctor_(std::move(sf))
 {
 	while(n)
 	{
@@ -154,13 +154,11 @@ Pool::Pool(boost::asio::io_service& is, const char* const& pgconninfo, size_t n,
 }
 
 Pool::Pool(boost::asio::io_service& is, const char* const& pgconninfo, size_t n) :
-Pool(is, pgconninfo, n, nullptr)
+	Pool(is, pgconninfo, n, nullptr)
 {}
 
 bool Pool::query(const char* const& query, Callback cb)
 {
-	//std::cout << "1(3)\n";
-
 	std::unique_lock<std::mutex> lg(poolLock_);
 
 	Connection* c = nullptr;
@@ -191,11 +189,8 @@ bool Pool::query(const char* const& query, Callback cb)
 	lg.unlock();
 
 	PQsendQuery(c->handle_, query);
-	/*boost::asio::async_read(c->socket_, boost::asio::null_buffers(), std::bind(&Connection::async_query_cb, this, std::placeholders::_1,
-                                                    std::placeholders::_2, std::move(cb)));*/
 	c->socket_.async_read_some(boost::asio::null_buffers(), std::bind(&Connection::async_query_cb, c, std::placeholders::_1,
 			std::placeholders::_2, std::move(cb)));
-	//c->socket_.async_read_some(boost::asio::null_buffers(), [](boost::system::error_code const& ec, size_t bt){});
 	return true;
 }
 
@@ -207,11 +202,9 @@ void Connection::async_query_cb(boost::system::error_code const& ec, size_t cons
 		auto ret = PQconsumeInput(handle_);
 		if(!ret)
 			std::cerr << PQerrorMessage(handle_) << std::endl;
-		//TODO: buraya PQisBusy ile tekrar kendine asnyc_read_some çağırılmalı mı?
+		//TODO: self call with PQisBusy query?
 		res = PQgetResult(handle_);
-		//std::cout << res << std::endl;
 		while(PQgetResult(handle_) != nullptr);
-		//	std::cout << res << std::endl;
 		status_ = Status::DEACTIVE;
 		cb(ec, {{res}});
 	}
