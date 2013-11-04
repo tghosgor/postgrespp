@@ -243,10 +243,13 @@ void Pool::asyncQueryCb(boost::system::error_code const& ec, size_t const& bt, C
 	
 	dtimer_.expires_from_now(boost::posix_time::seconds(settings_.connUnusedTimeout));
 	dtimer_.async_wait([this](boost::system::error_code const& ec){
-			std::lock_guard<std::mutex> lg(poolLock_);
-			while(pool_.back().status_ == Connection::Status::DEACTIVE && pool_.size() > settings_.minConnCount)
+			if(!ec)
 			{
-				pool_.pop_back();
+				std::lock_guard<std::mutex> lg(poolLock_);
+				while(pool_.back().status_ == Connection::Status::DEACTIVE && pool_.size() > settings_.minConnCount)
+				{
+					pool_.pop_back();
+				}
 			}
 		});
 }
