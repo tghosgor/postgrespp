@@ -5,6 +5,9 @@ postgres++ is a thin libpq wrapper that aims to make libpq easier to use.
 
 It has the following basic but time saving features:
 
+### # _Connection Pooling_
+It has an internal connection pool with minimum and maximum connection limits and unused connection killer.
+
 ### # _Asynchronous_
 It provides asynchronous database operations using Boost.ASIO under the hood.
 
