@@ -34,6 +34,9 @@ either expressed or implied, of the FreeBSD Project.
 namespace postgrespp
 {
 
+/*
+ * EscapedLiteral
+ */
 EscapedLiteral::EscapedLiteral(char* const& data) : data_(data)
 {};
 
@@ -46,6 +49,9 @@ EscapedLiteral::~EscapedLiteral(){ if(data_ != nullptr) PQfreemem(data_); }
 
 inline char* const& EscapedLiteral::c_str() { return data_; }
 
+/*
+ * Result
+ */
 Result::Result(PGresult* const& res) :
 	res_(res),
 	nrows_(PQntuples(res_))
@@ -84,9 +90,13 @@ void Result::reset()
 	row_ = -1;
 }
 
+/*
+ * Connection
+ */
 Connection::Connection(boost::asio::io_service& is) :
 	is_(is),
-	socket_(is)
+	socket_(is),
+	status_(Status::DEACTIVE)
 {}
 
 Connection::Connection(boost::asio::io_service& is, const char* const& pgconninfo) :
@@ -98,7 +108,7 @@ Connection::Connection(boost::asio::io_service& is, const char* const& pgconninf
 Connection::~Connection()
 {
 #ifndef NDEBUG
-	std::cerr << "PG connection ended.\n";
+	std::cerr << "postgres++: connection ended.\n";
 #endif
 	PQfinish(handle_);
 }
@@ -106,10 +116,16 @@ Connection::~Connection()
 ConnStatusType Connection::connect(const char* const& pgconninfo)
 {
 	handle_ = PQconnectdb(pgconninfo);
-	bool success = !PQsetnonblocking(handle_, 1) && status() == CONNECTION_OK && PQsocket(handle_) != -1;
-	assert(success);
+	bool success = !PQsetnonblocking(handle_, 1) && status() == CONNECTION_OK;
 	if(success)
 		socket_.assign(boost::asio::ip::tcp::v4(), PQsocket(handle_));
+	else
+	{
+#ifndef NDEBUG
+		std::cerr << "postgres++: connection error: " << PQerrorMessage(handle_) << std::endl;
+#endif
+		handle_ = nullptr;
+	}
 	return status();
 }
 
@@ -139,23 +155,38 @@ PGresult* Connection::prepare(const char* const& stmtName, const char* const& qu
 	return PQprepare(handle_, stmtName, query, nParams, paramTypes);
 }
 
-Pool::Pool(boost::asio::io_service& is, const char* const& pgconninfo, size_t n, SpawnFunctor sf):
+/*
+ * Pool
+ */
+Pool::Pool(boost::asio::io_service& is, const char* const& pgconninfo, size_t const& initialConnCount, Pool::Settings const& settings) :
+	settings_(settings),
 	is_(is),
 	pgconninfo_(pgconninfo),
-	spawnFunctor_(std::move(sf))
+	dtimer_(is)
 {
+	createConn(initialConnCount);
+}
+
+size_t Pool::createConn(size_t n)
+{
+#ifndef _NDEBUG
+	std::cout << "postgres++: Creating " << pool_.size() << ". db connection.\n";
+#endif
 	while(n)
 	{
 		pool_.emplace_back(is_, pgconninfo_.c_str());
-		if(spawnFunctor_ != nullptr)
-			spawnFunctor_(pool_.back());
+		if(pool_.back().status() != CONNECTION_OK)
+		{
+			pool_.pop_back();
+			return n;
+		}
+		if(settings_.spawnFunction != nullptr)
+			settings_.spawnFunction(pool_.back());
 		--n;
 	}
+	
+	return n;
 }
-
-Pool::Pool(boost::asio::io_service& is, const char* const& pgconninfo, size_t n) :
-	Pool(is, pgconninfo, n, nullptr)
-{}
 
 bool Pool::query(const char* const& query, Callback cb)
 {
@@ -174,14 +205,10 @@ bool Pool::query(const char* const& query, Callback cb)
 
 	if(c == nullptr)
 	{
-#ifndef _NDEBUG
-		std::cout << "Creating " << pool_.size() << ". db connection.\n";
-#endif
-		if(pool_.size() > 75)
+		if(pool_.size() >= settings_.maxConnCount)
 			return false;
-		pool_.emplace_back(is_, pgconninfo_.c_str());
-		if(spawnFunctor_ != nullptr)
-			spawnFunctor_(pool_.back());
+		if(createConn(1) == 1)
+			return false;
 		c = &pool_.back();
 		c->status_ = Connection::Status::ACTIVE;
 	}
@@ -189,30 +216,39 @@ bool Pool::query(const char* const& query, Callback cb)
 	lg.unlock();
 
 	PQsendQuery(c->handle_, query);
-	c->socket_.async_read_some(boost::asio::null_buffers(), std::bind(&Connection::async_query_cb, c, std::placeholders::_1,
-			std::placeholders::_2, std::move(cb)));
+	c->socket_.async_read_some(boost::asio::null_buffers(), std::bind(&Pool::asyncQueryCb, this, std::placeholders::_1,
+			std::placeholders::_2, c, std::move(cb)));
 	return true;
 }
 
-void Connection::async_query_cb(boost::system::error_code const& ec, size_t const& bt, Callback cb)
+void Pool::asyncQueryCb(boost::system::error_code const& ec, size_t const& bt, Connection* c, Callback cb)
 {
 	PGresult* res = nullptr;
 	if(!ec)
 	{
-		auto ret = PQconsumeInput(handle_);
+		auto ret = PQconsumeInput(c->handle_);
 		if(!ret)
-			std::cerr << PQerrorMessage(handle_) << std::endl;
-		//TODO: self call with PQisBusy query?
-		res = PQgetResult(handle_);
-		while(PQgetResult(handle_) != nullptr);
-		status_ = Status::DEACTIVE;
+			std::cerr << PQerrorMessage(c->handle_) << std::endl;
+		//TODO: need a self call with PQisBusy query here?
+		res = PQgetResult(c->handle_);
+		while(PQgetResult(c->handle_) != nullptr);
+		c->status_ = Connection::Status::DEACTIVE;
 		cb(ec, {{res}});
 	}
 	else
 	{
-		status_ = Status::DEACTIVE;
+		c->status_ = Connection::Status::DEACTIVE;
 		cb(boost::system::error_code(1, boost::system::system_category()), {{res}});
 	}
+	
+	dtimer_.expires_from_now(boost::posix_time::seconds(settings_.connUnusedTimeout));
+	dtimer_.async_wait([this](boost::system::error_code const& ec){
+			std::lock_guard<std::mutex> lg(poolLock_);
+			while(pool_.back().status_ == Connection::Status::DEACTIVE && pool_.size() > settings_.minConnCount)
+			{
+				pool_.pop_back();
+			}
+		});
 }
 
 }
