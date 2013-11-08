@@ -1,12 +1,12 @@
-include_directories(include)
+INCLUDE_DIRECTORIES(include)
 
 ADD_LIBRARY(postgrespp STATIC src/postgrespp.cpp)
 if(CMAKE_COMPILER_IS_GNUCXX)
-	target_link_libraries(postgrespp pthread)
+	TARGET_LINK_LIBRARIES(postgrespp pthread)
 endif()
 
 INSTALL(FILES include/postgrespp.h DESTINATION include)
-INSTALL(TARGETS postgrespp	
+INSTALL(TARGETS postgrespp
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
