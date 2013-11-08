@@ -56,7 +56,7 @@ public:
 	EscapedLiteral(EscapedLiteral&& o);
 	~EscapedLiteral();
 
-	char* const& c_str();
+	char* const& EscapedLiteral::c_str() { return data_; }
 };
 
 class Result

@@ -47,8 +47,6 @@ EscapedLiteral::EscapedLiteral(EscapedLiteral&& o)
 
 EscapedLiteral::~EscapedLiteral(){ if(data_ != nullptr) PQfreemem(data_); }
 
-inline char* const& EscapedLiteral::c_str() { return data_; }
-
 /*
  * Result
  */
