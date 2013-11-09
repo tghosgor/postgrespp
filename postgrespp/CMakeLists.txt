@@ -7,7 +7,6 @@ endif()
 
 INSTALL(FILES include/postgrespp.h DESTINATION include)
 INSTALL(TARGETS postgrespp
-  RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
 )
