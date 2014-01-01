@@ -179,7 +179,7 @@ private:
 	boost::asio::deadline_timer dtimer_;
 
 public:
-	Pool(boost::asio::io_service& is, const char* const& pgconninfo, size_t const& initialConnCount, Settings const& settings = {20, 5, 75, nullptr});
+	Pool(boost::asio::io_service& is, const char* const& pgconninfo, Settings const& settings = {20, 1, 75, nullptr});
 
 	/*
 	 * Tries to create 'n' connections.

@@ -156,13 +156,13 @@ PGresult* Connection::prepare(const char* const& stmtName, const char* const& qu
 /*
  * Pool
  */
-Pool::Pool(boost::asio::io_service& is, const char* const& pgconninfo, size_t const& initialConnCount, Pool::Settings const& settings) :
+Pool::Pool(boost::asio::io_service& is, const char* const& pgconninfo, Pool::Settings const& settings) :
 	settings_(settings),
 	is_(is),
 	pgconninfo_(pgconninfo),
 	dtimer_(is)
 {
-	createConn(initialConnCount);
+	createConn(settings.minConnCount);
 }
 
 size_t Pool::createConn(size_t n)
