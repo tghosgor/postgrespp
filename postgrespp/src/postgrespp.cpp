@@ -207,13 +207,13 @@ bool Pool::query(const char* const& query, Callback cb)
 	return true;
 }
 
-bool Pool::queryParams(const char* const& query, int n_params, const Oid* param_types, const char* const* param_values, const int* param_lengths, const int* param_formats, int result_format, Callback cb)
+bool Pool::queryParams(const char* const& query, int const& n_params, ResultFormat const& result_format, Callback cb, const char* const* const& param_values, const int* const& param_lengths, const int* const& param_formats, const Oid* const& param_types)
 {
 	auto c = getFreeConnection();
 	if(c == nullptr)
 		return false;
 
-	PQsendQueryParams(c->handle_, query, n_params, param_types, param_values, param_lengths, param_formats, result_format);
+	PQsendQueryParams(c->handle_, query, n_params, param_types, param_values, param_lengths, param_formats, static_cast<int>(result_format));
 	c->socket_.async_read_some(boost::asio::null_buffers(), std::bind(&Pool::asyncQueryCb, this, std::placeholders::_1,
 			std::placeholders::_2, std::ref(*c), std::move(cb)));
 	return true;

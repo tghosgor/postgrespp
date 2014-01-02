@@ -27,6 +27,9 @@ of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the FreeBSD Project.
 */
 
+//FOR TEST OUTPUT
+#include <iostream>
+
 #pragma once
 
 #include <atomic>
@@ -35,7 +38,7 @@ either expressed or implied, of the FreeBSD Project.
 #include <mutex>
 
 #include <boost/asio.hpp>
-
+#include <endian.h>
 #include <libpq-fe.h>
 
 namespace postgrespp
@@ -196,6 +199,12 @@ public:
 	typedef std::function<void(Connection&)> SpawnFunction;
 	typedef std::function<void(boost::system::error_code const&, Result)> Callback;
 	
+	enum class ResultFormat : int
+	{
+		TEXT = 0,
+		BINARY
+	};
+	
 	struct Settings
 	{
 		size_t connUnusedTimeout;
@@ -203,16 +212,6 @@ public:
 		size_t maxConnCount;
 		SpawnFunction spawnFunction;
 	} settings_;
-
-private:
-	boost::asio::io_service& is_;
-
-	std::mutex poolLock_;
-	std::string pgconninfo_;
-
-	std::deque<Connection> pool_;
-	
-	boost::asio::deadline_timer dtimer_;
 
 public:
 	Pool(boost::asio::io_service& is, const char* const& pgconninfo, Settings const& settings = {20, 1, 75, nullptr});
@@ -232,10 +231,102 @@ public:
 	 * Returns: true if query is sent successfully, false if not.
 	 */
 	bool query(const char* const& query, Callback cb);
-	bool queryParams(const char* const& query, int n_params, const Oid* param_types, const char* const* param_values, const int* param_lengths, const int* param_formats, int result_format, Callback cb);
+	
+	/*
+	 * Same as Pool::query but takes parameters like PQexecParams.
+	 */
+	bool queryParams(const char* const& query, int const& n_params, ResultFormat const& result_format, Callback cb, const char* const* const& param_values, const int* const& param_lengths, const int* const& param_formats, const Oid* const& param_types = nullptr);
+  
+  /*
+   * Same as Pool::query but takes parameters like PQexecParams, also makes use of C++11 variadic template.
+   */
+  template<typename... Args>
+  bool queryParams(const char* const& query, ResultFormat const& result_format, Callback cb, Args... args)
+  {
+    static char* valptr_array[sizeof...(Args)];
+    static int len_array[sizeof...(Args)];
+    static int format_array[sizeof...(Args)];
+    
+    fill_param_arrays(valptr_array, len_array, format_array, args...);
+    
+    for(size_t i = 0; i < sizeof...(Args); ++i)
+    {
+			std::cout << len_array[i] << " - " << format_array[i] << std::endl;
+		}
+    
+    auto ret = queryParams(query, sizeof...(Args), result_format, std::move(cb), valptr_array, len_array, format_array);
+    
+    for(size_t i = 0; i < sizeof...(Args); ++i)
+			if(format_array[i] == 1)
+				delete valptr_array[i];
+      
+    return ret;
+  }
+
+private:
+	boost::asio::io_service& is_;
+
+	std::mutex poolLock_;
+	std::string pgconninfo_;
+
+	std::deque<Connection> pool_;
+	
+	boost::asio::deadline_timer dtimer_;
 	
 private:
 	Connection* getFreeConnection();
 	void asyncQueryCb(boost::system::error_code const& ec, size_t const& bt, Connection& conn, Callback cb);
+      
+  void fill_param_arrays(char** valptr_array, int* len_array, int* format_array) { }
+
+  template<typename... Args>
+  void fill_param_arrays(char** valptr_array, int* len_array, int* format_array, int64_t const& value, Args... args)
+  {
+    *valptr_array = new char[sizeof(value)];
+    **reinterpret_cast<int64_t**>(valptr_array) = htobe64(value);
+    *len_array = sizeof(int64_t);
+    *format_array = 1;
+    fill_param_arrays(++valptr_array, ++len_array, ++format_array, args...);
+  }
+
+  template<typename... Args>
+  void fill_param_arrays(char** valptr_array, int* len_array, int* format_array, int32_t const& value, Args... args)
+  {
+    *valptr_array = new char[sizeof(value)];
+    **reinterpret_cast<int32_t**>(valptr_array) = htobe32(value);
+    *len_array = sizeof(int32_t);
+    *format_array = 1;
+    fill_param_arrays(++valptr_array, ++len_array, ++format_array, args...);
+  }
+
+  template<typename... Args>
+  void fill_param_arrays(char** valptr_array, int* len_array, int* format_array, int16_t const& value, Args... args)
+  {
+    *valptr_array = new char[sizeof(value)];
+    **reinterpret_cast<int16_t**>(valptr_array) = htobe16(value);
+    *len_array = sizeof(int16_t);
+    *format_array = 1;
+    fill_param_arrays(++valptr_array, ++len_array, ++format_array, args...);
+  }
+
+  template<typename... Args>
+  void fill_param_arrays(char** valptr_array, int* len_array, int* format_array, int8_t const& value, Args... args)
+  {
+    *valptr_array = new char[sizeof(value)];
+    **reinterpret_cast<int8_t**>(valptr_array) = value;
+    *len_array = sizeof(int8_t);
+    *format_array = 1;
+    fill_param_arrays(++valptr_array, ++len_array, ++format_array, args...);
+  }
+
+  template<typename... Args>
+  void fill_param_arrays(char** valptr_array, int* len_array, int* format_array, const char* const& value, Args... args)
+  {
+    *valptr_array = new char[sizeof(value)];
+    *const_cast<const char **>(reinterpret_cast<char**>(valptr_array)) = value;
+    *len_array = 0;
+    *format_array = 0;
+    fill_param_arrays(++valptr_array, ++len_array, ++format_array, args...);
+  }
 };
 }
