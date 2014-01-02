@@ -128,7 +128,7 @@ public:
 	/*
 	 * Resets the internal row counter to the first row.
 	 */
-	void Result::reset()
+	void reset()
 	{
 		row_ = -1;
 	}
