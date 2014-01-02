@@ -112,7 +112,7 @@ public:
 	/*
 	 * Returns result status.
 	 */
-	 const char* getStatus()
+	 ExecStatusType getStatus()
 	 {
 		 return PQresultStatus(res_);
 	 }
