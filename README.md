@@ -11,5 +11,8 @@ It has an internal connection pool with minimum and maximum connection limits an
 ### # _Asynchronous_
 It provides asynchronous database operations using Boost.ASIO under the hood.
 
+### # _Safer & Easier_
+It uses the power of C++11 variadic templates in conjunction with PQsendQueryParam. It is both extremely easier and safer to use the parametered send query with variadic templates.
+
 ### # _Cleaner Code_
 It tries to take advantage of RAII where possible. It is more difficult to suffer from a memory leak and naturally leads to easier and cleaner code.
