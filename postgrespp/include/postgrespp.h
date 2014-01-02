@@ -110,6 +110,14 @@ public:
 	}
 	
 	/*
+	 * Returns result status.
+	 */
+	 const char* getStatus()
+	 {
+		 return PQresultStatus(res_);
+	 }
+	
+	/*
 	 * Returns result status as text.
 	 */
 	 const char* getStatusText()
