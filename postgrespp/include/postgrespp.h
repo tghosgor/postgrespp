@@ -119,7 +119,7 @@ public:
 		DEACTIVE = 0,
 		ACTIVE = 1
 	};
-	
+
 private:
 	boost::asio::io_service& is_;
 	boost::asio::ip::tcp::socket socket_;
@@ -196,8 +196,10 @@ public:
 	 * Returns: true if query is sent successfully, false if not.
 	 */
 	bool query(const char* const& query, Callback cb);
+	bool queryParams(const char* const& query, int n_params, const Oid* param_types, const char* const* param_values, const int* param_lengths, const int* param_formats, int result_format, Callback cb);
 	
 private:
+	Connection* getFreeConnection();
 	void asyncQueryCb(boost::system::error_code const& ec, size_t const& bt, Connection& conn, Callback cb);
 };
 }

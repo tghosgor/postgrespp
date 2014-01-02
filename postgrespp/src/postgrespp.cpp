@@ -186,9 +186,9 @@ size_t Pool::createConn(size_t n)
 	return n;
 }
 
-bool Pool::query(const char* const& query, Callback cb)
+Connection* Pool::getFreeConnection()
 {
-	std::unique_lock<std::mutex> lg(poolLock_);
+	std::lock_guard<std::mutex> lg(poolLock_);
 
 	Connection* c = nullptr;
 	for(auto& it : pool_)
@@ -204,16 +204,36 @@ bool Pool::query(const char* const& query, Callback cb)
 	if(c == nullptr)
 	{
 		if(pool_.size() >= settings_.maxConnCount)
-			return false;
+			return nullptr;
 		if(createConn(1) == 1)
-			return false;
+			return nullptr;
 		c = &pool_.back();
 		c->status_ = Connection::Status::ACTIVE;
 	}
+	
+	return c;
+}
 
-	lg.unlock();
+bool Pool::query(const char* const& query, Callback cb)
+{
+	auto c = getFreeConnection();
+	if(c == nullptr)
+		return false;
 
 	PQsendQuery(c->handle_, query);
+	c->socket_.async_read_some(boost::asio::null_buffers(), std::bind(&Pool::asyncQueryCb, this, std::placeholders::_1,
+			std::placeholders::_2, std::ref(*c), std::move(cb)));
+			
+	return true;
+}
+
+bool Pool::queryParams(const char* const& query, int n_params, const Oid* param_types, const char* const* param_values, const int* param_lengths, const int* param_formats, int result_format, Callback cb)
+{
+	auto c = getFreeConnection();
+	if(c == nullptr)
+		return false;
+
+	PQsendQueryParams(c->handle_, query, n_params, param_types, param_values, param_lengths, param_formats, result_format);
 	c->socket_.async_read_some(boost::asio::null_buffers(), std::bind(&Pool::asyncQueryCb, this, std::placeholders::_1,
 			std::placeholders::_2, std::ref(*c), std::move(cb)));
 	return true;
