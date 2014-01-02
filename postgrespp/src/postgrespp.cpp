@@ -68,26 +68,6 @@ Result::~Result()
 		PQclear(res_);
 }
 
-int Result::rows()
-{
-	return nrows_;
-}
-
-bool Result::next()
-{
-	return (++row_ < rows());
-}
-
-char* Result::get(int const& column)
-{
-	return PQgetvalue(res_, row_, column);
-}
-
-void Result::reset()
-{
-	row_ = -1;
-}
-
 /*
  * Connection
  */

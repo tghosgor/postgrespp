@@ -86,24 +86,52 @@ public:
 	/*
 	 * Returns: the number of rows in the result set.
 	 */
-	int rows();
+	int rows()
+	{
+		return nrows_;
+	}
 	
 	/*
 	 * Increments the internal row counter to the next row.
 	 * 
 	 * Returns: true if it the incremented row is a valid row, false if not and we are past the end row.
 	 */
-	bool next();
+	bool next()
+	{
+		return (++row_ < rows());
+	}
 
 	/*
 	 * Returns: the value in 'coulmn'th coulmn in the current row.
 	 */
-	char* get(int const& column);
-
+	char* get(int const& column)
+	{
+		return PQgetvalue(res_, row_, column);
+	}
+	
+	/*
+	 * Returns result status as text.
+	 */
+	 const char* getStatusText()
+	 {
+		 return PQresStatus(PQresultStatus(res_));
+	 }
+	 
+	/*
+	 * Returns error message associated with the result.
+	 */
+	 const char* getErrorMessage()
+	 {
+		 return PQresultErrorMessage(res_);
+	 }
+	 
 	/*
 	 * Resets the internal row counter to the first row.
 	 */
-	void reset();
+	void Result::reset()
+	{
+		row_ = -1;
+	}
 };
 
 class Pool;
