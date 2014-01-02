@@ -28,7 +28,7 @@ either expressed or implied, of the FreeBSD Project.
 */
 
 //FOR TEST OUTPUT
-#include <iostream>
+//#include <iostream>
 
 #pragma once
 
@@ -249,10 +249,10 @@ public:
     
     fill_param_arrays(valptr_array, len_array, format_array, args...);
     
-    for(size_t i = 0; i < sizeof...(Args); ++i)
-    {
-			std::cout << len_array[i] << " - " << format_array[i] << std::endl;
-		}
+    //for(size_t i = 0; i < sizeof...(Args); ++i)
+    //{
+		//	std::cout << len_array[i] << " - " << format_array[i] << std::endl;
+		//}
     
     auto ret = queryParams(query, sizeof...(Args), result_format, std::move(cb), valptr_array, len_array, format_array);
     
