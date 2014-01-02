@@ -147,7 +147,7 @@ Pool::Pool(boost::asio::io_service& is, const char* const& pgconninfo, Pool::Set
 
 size_t Pool::createConn(size_t n)
 {
-#ifndef _NDEBUG
+#ifndef NDEBUG
 	std::cout << "postgres++: Creating " << pool_.size() << ". db connection.\n";
 #endif
 	while(n)
