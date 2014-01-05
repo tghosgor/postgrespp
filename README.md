@@ -16,3 +16,5 @@ It uses the power of C++11 variadic templates in conjunction with PQsendQueryPar
 
 ### # _Cleaner Code_
 It tries to take advantage of RAII where possible. It is more difficult to suffer from a memory leak and naturally leads to easier and cleaner code.
+
+The project uses CMake, builds and installs as static library by default.
