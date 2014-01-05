@@ -19,3 +19,5 @@ It tries to take advantage of RAII where possible. It is more difficult to suffe
 
 ### _More Information_
 The project uses CMake, builds and installs as a "Release" static library by default.
+
+There are tags but master is also safe to use.

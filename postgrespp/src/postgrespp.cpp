@@ -51,8 +51,8 @@ EscapedLiteral::~EscapedLiteral(){ if(data_ != nullptr) PQfreemem(data_); }
  * Result
  */
 Result::Result(PGresult* const& res) :
-	res_(res),
-	nrows_(PQntuples(res_))
+   res_(res),
+   nrows_(PQntuples(res_))
 {}
 
 Result::Result(Result&& o) :
@@ -127,10 +127,10 @@ EscapedLiteral Connection::escapeLiteral(const char* const& str, size_t const& l
 	return EscapedLiteral(PQescapeLiteral(handle_, str, len));
 }
 
-PGresult* Connection::prepare(const char* const& stmtName, const char* const& query, int const& nParams,
-			const Oid* const& paramTypes)
+PGresult* Connection::prepare(const char* const& stmt_name, const char* const& query, int const& n_params,
+			const Oid* const& param_types)
 {
-	return PQprepare(handle_, stmtName, query, nParams, paramTypes);
+	return PQprepare(handle_, stmt_name, query, n_params, param_types);
 }
 
 /*
@@ -142,7 +142,7 @@ Pool::Pool(boost::asio::io_service& is, const char* const& pgconninfo, Pool::Set
 	pgconninfo_(pgconninfo),
 	dtimer_(is)
 {
-	createConn(settings.minConnCount);
+	createConn(settings.min_conn_count);
 }
 
 size_t Pool::createConn(size_t n)
@@ -158,8 +158,8 @@ size_t Pool::createConn(size_t n)
 			pool_.pop_back();
 			return n;
 		}
-		if(settings_.spawnFunction != nullptr)
-			settings_.spawnFunction(pool_.back());
+		if(settings_.spawn_func != nullptr)
+			settings_.spawn_func(pool_.back());
 		--n;
 	}
 	
@@ -183,7 +183,7 @@ Connection* Pool::getFreeConnection()
 
 	if(c == nullptr)
 	{
-		if(pool_.size() >= settings_.maxConnCount)
+		if(pool_.size() >= settings_.max_conn_count)
 			return nullptr;
 		if(createConn(1) == 1)
 			return nullptr;
@@ -239,12 +239,12 @@ void Pool::asyncQueryCb(boost::system::error_code const& ec, size_t const& bt, C
 		cb(boost::system::error_code(1, boost::system::system_category()), {{res}});
 	}
 	
-	dtimer_.expires_from_now(boost::posix_time::seconds(settings_.connUnusedTimeout));
+	dtimer_.expires_from_now(boost::posix_time::seconds(settings_.conn_unused_timeout));
 	dtimer_.async_wait([this](boost::system::error_code const& ec){
 			if(!ec)
 			{
 				std::lock_guard<std::mutex> lg(poolLock_);
-				if(pool_.size() > settings_.minConnCount)
+				if(pool_.size() > settings_.min_conn_count)
 				{
 					if(pool_.back().status_ == Connection::Status::DEACTIVE)
 					{

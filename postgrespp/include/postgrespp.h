@@ -41,6 +41,7 @@ either expressed or implied, of the FreeBSD Project.
 namespace postgrespp
 {
 
+/* This is mostly unneeded since parametered queries are used by default. */
 class Connection;
 class EscapedLiteral
 {
@@ -59,6 +60,11 @@ public:
 	char* const& c_str() { return data_; }
 };
 
+/*
+ * Result
+ * 
+ * It contains the information about the result retrieved from the sql query.
+ */
 class Result
 {
 	friend class Pool;
@@ -97,6 +103,8 @@ public:
 	 */
 	bool next()
 	{
+		/* cotinuous call to next() even after max rows reached is most probably not wanted */
+		assert(row_ + 1 < rows());
 		return (++row_ < rows());
 	}
 
@@ -111,6 +119,7 @@ public:
 	 */
 	 ExecStatusType getStatus()
 	 {
+		 assert(res_ != nullptr);
 		 return PQresultStatus(res_);
 	 }
 	
@@ -119,6 +128,7 @@ public:
 	 */
 	 const char* getStatusText()
 	 {
+		 assert(res_ != nullptr);
 		 return PQresStatus(PQresultStatus(res_));
 	 }
 	 
@@ -127,6 +137,7 @@ public:
 	 */
 	 const char* getErrorMessage()
 	 {
+		 assert(res_ != nullptr);
 		 return PQresultErrorMessage(res_);
 	 }
 	 
@@ -217,10 +228,10 @@ public:
 	
 	struct Settings
 	{
-		size_t connUnusedTimeout;
-		size_t minConnCount;
-		size_t maxConnCount;
-		SpawnFunction spawnFunction;
+		size_t conn_unused_timeout;
+		size_t min_conn_count;
+		size_t max_conn_count;
+		SpawnFunction spawn_func;
 	} settings_;
 
 public:
@@ -343,30 +354,35 @@ private:
 template<> inline
 int8_t Result::get<int8_t>(int const& column)
 {
+	assert(res_ != nullptr);
 	return *reinterpret_cast<int8_t*>(PQgetvalue(res_, row_, column));
 }
 
 template<> inline
 int16_t Result::get<int16_t>(int const& column)
 {
+	assert(res_ != nullptr);
 	return be16toh(*reinterpret_cast<int16_t*>(PQgetvalue(res_, row_, column)));
 }
 	
 template<> inline
 int32_t Result::get<int32_t>(int const& column)
 {
+	assert(res_ != nullptr);
 	return be32toh(*reinterpret_cast<int32_t*>(PQgetvalue(res_, row_, column)));
 }
 
 template<> inline
 int64_t Result::get<int64_t>(int const& column)
 {
+	assert(res_ != nullptr);
 	return be64toh(*reinterpret_cast<int64_t*>(PQgetvalue(res_, row_, column)));
 }
 
 template<> inline
 Result::RawPtr Result::get<Result::RawPtr>(int const& column)
 {
+	assert(res_ != nullptr);
 	return PQgetvalue(res_, row_, column);
 }
 
