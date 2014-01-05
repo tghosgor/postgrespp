@@ -27,9 +27,6 @@ of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the FreeBSD Project.
 */
 
-//FOR TEST OUTPUT
-//#include <iostream>
-
 #pragma once
 
 #include <atomic>
@@ -65,22 +62,21 @@ public:
 class Result
 {
 	friend class Pool;
-
-private:
-	enum class Format : int
+public:
+	typedef char* RawPtr;
+	/*struct RawPtr
 	{
-		TEXT = 0,
-		BINARY = 1
-	};
-
-	PGresult* res_;
-	int row_ = -1;
-	int nrows_;
-
-	bool moved_ = false;
-
-private:
-	Result(PGresult* const& res);
+	public:
+		RawPtr(char* const& ptr) : ptr_(ptr) { };
+		
+		operator char*() const
+		{
+			return ptr_;
+		}
+	
+	private:
+		char* ptr_;
+	};*/
 
 public:
 	Result(Result&& o);
@@ -107,10 +103,8 @@ public:
 	/*
 	 * Returns: the value in 'coulmn'th coulmn in the current row.
 	 */
-	char* get(int const& column)
-	{
-		return PQgetvalue(res_, row_, column);
-	}
+	template<typename T>
+	T get(int const& column);
 	
 	/*
 	 * Returns result status.
@@ -143,6 +137,22 @@ public:
 	{
 		row_ = -1;
 	}
+
+private:
+	enum class Format : int
+	{
+		TEXT = 0,
+		BINARY = 1
+	};
+
+	PGresult* res_;
+	int row_ = -1;
+	int nrows_;
+
+	bool moved_ = false;
+
+private:
+	Result(PGresult* const& res);
 };
 
 class Pool;
@@ -329,4 +339,35 @@ private:
     fill_param_arrays(++valptr_array, ++len_array, ++format_array, args...);
   }
 };
+
+template<> inline
+int8_t Result::get<int8_t>(int const& column)
+{
+	return *reinterpret_cast<int8_t*>(PQgetvalue(res_, row_, column));
+}
+
+template<> inline
+int16_t Result::get<int16_t>(int const& column)
+{
+	return be16toh(*reinterpret_cast<int16_t*>(PQgetvalue(res_, row_, column)));
+}
+	
+template<> inline
+int32_t Result::get<int32_t>(int const& column)
+{
+	return be32toh(*reinterpret_cast<int32_t*>(PQgetvalue(res_, row_, column)));
+}
+
+template<> inline
+int64_t Result::get<int64_t>(int const& column)
+{
+	return be64toh(*reinterpret_cast<int64_t*>(PQgetvalue(res_, row_, column)));
+}
+
+template<> inline
+Result::RawPtr Result::get<Result::RawPtr>(int const& column)
+{
+	return PQgetvalue(res_, row_, column);
+}
+
 }
