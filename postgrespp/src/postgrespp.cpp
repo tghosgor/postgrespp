@@ -244,9 +244,12 @@ void Pool::asyncQueryCb(boost::system::error_code const& ec, size_t const& bt, C
 			if(!ec)
 			{
 				std::lock_guard<std::mutex> lg(poolLock_);
-				while(pool_.back().status_ == Connection::Status::DEACTIVE && pool_.size() > settings_.minConnCount)
+				if(pool_.size() > settings_.minConnCount)
 				{
-					pool_.pop_back();
+					if(pool_.back().status_ == Connection::Status::DEACTIVE)
+					{
+						pool_.pop_back();
+					}
 				}
 			}
 		});
