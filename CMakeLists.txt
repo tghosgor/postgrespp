@@ -22,4 +22,4 @@ SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/build/bin)
 
 ADD_SUBDIRECTORY(postgrespp)
 
-FILE(COPY postgrespp/include DESTINATION build)
+FILE(COPY postgrespp/include DESTINATION ${CMAKE_BINARY_DIR}/build)
