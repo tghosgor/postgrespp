@@ -18,6 +18,11 @@ It uses the power of C++11 variadic templates in conjunction with PQsendQueryPar
 It tries to take advantage of RAII where possible. It is more difficult to suffer from a memory leak and naturally leads to easier and cleaner code.
 
 ### _More Information_
-The project uses CMake, builds and installs as a "Release" static library by default.
+The project uses GYP as its build system. It is easy to figure out and shell script for building will be added.
 
-There are tags but **_master_** branch is also safe to use.
+This project is licensed under:
+
+[![GPLv3](https://raw.githubusercontent.com/metherealone/qrive/misc/gplv3-127x51.png)](http://www.gnu.org/licenses/gpl-3.0.html)
+
+##P.S.
+**My bitcoin address:** 13vw56mgsFj6g2AV6j9RgS4hmWfnoMgc68
