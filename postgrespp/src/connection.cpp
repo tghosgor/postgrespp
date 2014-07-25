@@ -53,6 +53,18 @@ utility::StandaloneIoService& Connection::ioService() {
   return ioService;
 }
 
+Connection::Status Connection::beginTransaction() {
+  return queryParams("BEGIN;", [](const error_code& ec, Result res) { });
+}
+
+Connection::Status Connection::commit() {
+  return queryParams("COMMIT;", [](const error_code& ec, Result res) { });
+}
+
+Connection::Status Connection::rollback() {
+  return queryParams("ROLLBACK;", [](const error_code& ec, Result res) { });
+}
+
 Connection::~Connection() {
 #ifndef NDEBUG
   std::cerr << "postgres++: connection ended.\n";
@@ -64,18 +76,13 @@ Connection::Status Connection::status() const {
   return PQstatus(m_handle);
 }
 
-bool Connection::queryParams(const char* const& query, int const& n_params, ResultFormat const& result_format,
-                       Callback callback, const char* const* const& param_values, const int* const& param_lengths,
+Connection::Status Connection::queryParams(const char* const& query, int const& n_params,
+                       Callback callback, ResultFormat const& result_format, const char* const* const& param_values, const int* const& param_lengths,
                        const int* const& param_formats, const Oid* const& param_types) {
   PQsendQueryParams(m_handle, query, n_params, param_types, param_values, param_lengths, param_formats, static_cast<int>(result_format));
   m_socket.async_read_some(boost::asio::null_buffers(), std::bind(&Connection::asyncQueryCb, this, std::placeholders::_1,
                                                                     std::placeholders::_2, std::move(callback)));
   return true;
-}
-
-PGresult* Connection::prepare(const char* const& stmt_name, const char* const& query, int const& n_params,
-                              const Oid* const& param_types) {
-  return PQprepare(m_handle, stmt_name, query, n_params, param_types);
 }
 
 }// NS postgrespp

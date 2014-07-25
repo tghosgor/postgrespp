@@ -26,9 +26,7 @@ using namespace postgrespp;
 int main(int argc, char* argv[]) {
   auto connection = Connection::create("host=127.0.0.1");
 
-  std::cout << connection->status() << std::endl;
-
-  auto onQueryExecuted = [](const boost::system::error_code& ec, Result result) {
+  auto onQueryExecuted = [connection](const boost::system::error_code& ec, Result result) {
     if (!ec) {
       while (result.next()) {
         char* str;
@@ -45,9 +43,12 @@ int main(int argc, char* argv[]) {
     } else {
       std::cout << ec << std::endl;
     }
+
+    // we are done, stop the service
+    Connection::ioService().service().stop();
   };
 
-  connection->queryParams("select * from test_table", Connection::ResultFormat::TEXT, std::move(onQueryExecuted));
+  connection->queryParams("select * from test_table", std::move(onQueryExecuted),  Connection::ResultFormat::TEXT);
 
   Connection::ioService().thread().join();
 

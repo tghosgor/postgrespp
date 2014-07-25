@@ -6,7 +6,6 @@ namespace postgrespp {
 inline void Connection::asyncQueryCb(boost::system::error_code const& ec, size_t const& bt, Callback callback) {
   PGresult* res = nullptr;
   if (!ec) {
-
     auto ret = PQconsumeInput(m_handle);
 
     if (!ret)
@@ -17,18 +16,12 @@ inline void Connection::asyncQueryCb(boost::system::error_code const& ec, size_t
     res = PQgetResult(m_handle);
     while (PQgetResult(m_handle) != nullptr)
       ;
-
-    callback(ec, {{res}});
-
-  } else {
-
-    callback(boost::system::error_code(1, boost::system::system_category()), {{res}});
-
   }
+  callback(ec, {{res}});
 }
 
 template<typename... Args>
-inline bool Connection::queryParams(const char* const& query, Connection::ResultFormat const& resultFormat, Callback callback, Args... args)
+inline Connection::Status Connection::queryParams(const char* const& query, Callback callback, Connection::ResultFormat const& resultFormat, Args... args)
 {
   char* valptr_array[sizeof...(Args)];
   int len_array[sizeof...(Args)];
@@ -36,7 +29,7 @@ inline bool Connection::queryParams(const char* const& query, Connection::Result
 
   fillParamArray(valptr_array, len_array, format_array, args...);
 
-  auto ret = queryParams(query, sizeof...(Args), resultFormat, std::move(callback), valptr_array, len_array, format_array);
+  auto ret = queryParams(query, sizeof...(Args), std::move(callback), resultFormat, valptr_array, len_array, format_array);
 
   for(size_t i = 0; i < sizeof...(Args); ++i)
   if(format_array[i] == 1)

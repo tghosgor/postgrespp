@@ -35,15 +35,18 @@ class StandaloneIoService;
 class Connection {
   friend class Pool;
 
-  using io_service = boost::asio::io_service;
-
 public:
+  using error_code = boost::system::error_code;
+
   using Callback = std::function<void(boost::system::error_code const&, Result)>;
   using Status = int;
   enum class ResultFormat : int {
     TEXT = 0,
     BINARY
   };
+
+protected:
+  using io_service = boost::asio::io_service;
 
 public:
   ~Connection();
@@ -75,6 +78,19 @@ public:
   static utility::StandaloneIoService& ioService();
 
   /**
+   * @brief beginTransaction Begin a new transaction.
+   */
+  Status beginTransaction();
+  /**
+   * @brief commit End the transaction.
+   */
+  Status commit();
+  /**
+   * @brief rollback Rollback the transaction.
+   */
+  Status rollback();
+
+  /**
    * @brief queryParams Takes parameters like PQexecParams, also makes use of C++11 variadic template.
    * @param query Parametered query to send.
    * @param resultFormat The result format we want from the postgres server.
@@ -84,22 +100,19 @@ public:
    * This function automatically creates the structure to call the queryParams overload below.
    */
   template<typename... Args>
-  bool queryParams(const char* const& query, ResultFormat const& resultFormat, Callback callback, Args... args);
+  Status queryParams(const char* const& query, Callback callback, ResultFormat const& resultFormat = ResultFormat::TEXT, Args... args);
 
   /**
     @brief queryParams Takes parameters like PQexecParams.
    */
-  bool queryParams(const char* const& query, int const& n_params, ResultFormat const& result_format, Callback callback,
+  Status queryParams(const char* const& query, int const& n_params, Callback callback, ResultFormat const& result_format,
                    const char* const* const& param_values, const int* const& param_lengths,
                    const int* const& param_formats, const Oid* const& param_types = nullptr);
 
   Status status() const;
 
-private:
-  Connection(boost::asio::io_service& ioService, const char* const& pgconninfo);
-
-  PGresult* prepare(const char* const& stmt_name, const char* const& query, int const& n_params,
-                    const Oid* const& param_types);
+protected:
+  Connection(boost::asio::io_service& ioService, const char* const& pgConnInfo);
 
 private:
   void asyncQueryCb(boost::system::error_code const& ec, size_t const& bt, Callback cb);

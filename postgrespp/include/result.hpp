@@ -42,19 +42,14 @@ public:
    * @brief rows
    * @return The number of rows in the result set.
    */
-  int rows() {
-    return m_numRows;
-  }
+  int rows();
 
   /**
    * @brief next Increments the internal row counter to the next row.
    *
    * @return True if it the incremented row is a valid row, false if not and we are past the end row.
    */
-  bool next() {
-    assert(m_row + 1 < rows());
-    return (++m_row < rows());
-  }
+  bool next();
 
   /**
    * @brief get
@@ -67,35 +62,24 @@ public:
    * @brief getStatus
    * @return Result status.
    */
-  Status getStatus() {
-    assert(m_result != nullptr);
-    return PQresultStatus(m_result);
-  }
+  Status getStatus();
 
   /**
    * @brief getStatusText
    * @return Result status as text.
    */
-  const char* getStatusText() {
-    assert(m_result != nullptr);
-    return PQresStatus(PQresultStatus(m_result));
-  }
+  const char* getStatusText();
 
   /**
    * @brief getErrorMessage
    * @return Error message associated with the result.
    */
-  const char* getErrorMessage() {
-    assert(m_result != nullptr);
-    return PQresultErrorMessage(m_result);
-  }
+  const char* getErrorMessage();
 
   /**
    * @brief reset Resets the internal row counter to the first row.
    */
-  void reset() {
-    m_row = -1;
-  }
+  void reset();
 
 private:
   enum class Format : int {
@@ -110,6 +94,34 @@ private:
 private:
   Result(PGresult* const& result);
 };
+
+inline int Result::rows() {
+  return m_numRows;
+}
+
+inline bool Result::next() {
+  assert(m_row < rows());
+  return (++m_row < rows());
+}
+
+inline Result::Status Result::getStatus() {
+  assert(m_result != nullptr);
+  return PQresultStatus(m_result);
+}
+
+inline const char*Result::getStatusText() {
+  assert(m_result != nullptr);
+  return PQresStatus(PQresultStatus(m_result));
+}
+
+inline const char*Result::getErrorMessage() {
+  assert(m_result != nullptr);
+  return PQresultErrorMessage(m_result);
+}
+
+inline void Result::reset() {
+  m_row = -1;
+}
 
 template<>
 int8_t Result::get<int8_t>(int const&);
