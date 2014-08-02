@@ -25,4 +25,4 @@ This project is licensed under:
 [![GPLv3](https://raw.githubusercontent.com/metherealone/qrive/misc/gplv3-127x51.png)](http://www.gnu.org/licenses/gpl-3.0.html)
 
 ##P.S.
-**My bitcoin address:** 13vw56mgsFj6g2AV6j9RgS4hmWfnoMgc68
+**My bitcoin address:** 1LtsLW5n3jGXHoWGffh8njvh8MQcWmzxVD
