@@ -1,28 +1,69 @@
-postgres++
-==========
+# postgres++
 
-postgres++ is a thin libpq wrapper that aims to make libpq easier to use.
+postgres++ is a asynchronous c++ libpq wrapper that aims to make libpq easier
+to use.
 
-It is designed to be exteremely simple and thin. It has the following basic but time saving features:
+It is designed to be exteremely simple and thin.
 
-### # _Connection Pooling_
-It has an internal connection pool with minimum and maximum connection limits and unused connection killer.
+## Safer & Easier
 
-### # _Asynchronous_
-It provides asynchronous database operations using Boost.ASIO under the hood.
+It uses the power of c++11 variadic templates in conjunction with
+PQsendQueryParam. This makes the library both easier and safer to use.
 
-### # _Safer & Easier_
-It uses the power of C++11 variadic templates in conjunction with PQsendQueryParam. It is both extremely easier and safer to use the parametered send query with variadic templates.
+## Requirements
 
-### # _Cleaner Code_
-It tries to take advantage of RAII where possible. It is more difficult to suffer from a memory leak and naturally leads to easier and cleaner code.
+### c++17
 
-### _More Information_
-The project uses GYP as its build system. It is easy to figure out and shell script for building will be added.
+The library currently requires c++17 standard. It makes little use of c++17
+features as of writing this so it should be relatively simple to port it to c++14
+or c++11.
 
-This project is licensed under:
+### libpq
 
-[![GPLv3](https://raw.githubusercontent.com/metherealone/qrive/misc/gplv3-127x51.png)](http://www.gnu.org/licenses/gpl-3.0.html)
+The project is based on libpq.
 
-##P.S.
-**My bitcoin address:** 1LtsLW5n3jGXHoWGffh8njvh8MQcWmzxVD
+### boost
+
+Some of the boost libaries are used such as boost.asio and boost.endian. Their
+usage is not heavy and I believe all of the boost can be replaced without much
+effort. As an improvement, maybe socket ready signal interface can be abstracted
+to allow users to plug their own versions via templates.
+
+### cmake
+
+Build system is based on CMake.
+
+### gtest
+
+Unit tests are based on gtest.
+
+## Examples
+
+```c++
+  boost::asio::io_context ioc;
+
+  connection c{ioc, "host=127.0.0.1 user=postgres"};
+
+  c.transaction([&](auto txn) {
+    // move transaction into a std::shared_ptr to keep it alive in lambdas.
+    auto shared_txn = std::make_shared<work>(std::move(txn));
+
+    shared_txn->async_exec(
+      "SELECT * FROM tbl_test WHERE id = $1",
+      [shared_txn](auto&& result) {
+        assert(result.ok());
+
+        shared_txn->commit([shared_txn](auto&& commit_result) {
+          assert(commit_result.ok());
+
+          std::cout << "We are done." << std::endl;
+        });
+      },
+      1);
+  });
+
+  ioc.run();
+```
+
+More usage can be seen in [test/connection_test.cpp](test/connection_test.cpp)
+and other tests.
