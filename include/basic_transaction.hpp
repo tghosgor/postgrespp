@@ -114,6 +114,8 @@ public:
    * empty result where \ref result.done() returns true.
    */
   void async_exec_all(const query_t& query, exec_handler_t handler) {
+    assert(!done_);
+
     const auto res = PQsendQuery(connection().underlying_handle(),
         query.c_str());
 
@@ -145,6 +147,8 @@ protected:
 
 private:
   void async_exec_2(const query_t& query, exec_handler_t handler, const char* const* value_arr, const int* size_arr, const int* type_arr, std::size_t num_values) {
+    assert(!done_);
+
     const auto res = PQsendQueryParams(connection().underlying_handle(),
         query.c_str(),
         num_values,
@@ -162,6 +166,8 @@ private:
   }
 
   void async_exec_prepared_2(const statement_name_t& statement_name, exec_handler_t handler, const char* const* value_arr, const int* size_arr, const int* type_arr, std::size_t num_values) {
+    assert(!done_);
+
     const auto res = PQsendQueryPrepared(connection().underlying_handle(),
         statement_name.c_str(),
         num_values,
