@@ -346,6 +346,48 @@ TEST_F(ConnectionTest, async_exec_prepared_insert_10000) {
   txn.commit();
 }
 
+TEST_F(ConnectionTest, transaction_dtor_with_no_action) {
+  std::size_t insertions = 0;
+
+  std::shared_ptr<work> shared_txn;
+
+  std::function<void()> insert;
+
+  insert = [&]() {
+    shared_txn->async_exec(
+          "INSERT INTO " TEST_TABLE " (si, i, bi, t) VALUES ($1, $2, $3, $4)",
+          [&](auto result) {
+            ++insertions;
+
+            ASSERT_EQ(result::status_t::COMMAND_OK, result.status()) << result.error_message();
+
+            if (insertions < 100) {
+              insert();
+            } else {
+              shared_txn = nullptr;
+            }
+          },
+          static_cast<std::int16_t>(1), 2, static_cast<std::int64_t>(insertions), "my row text"
+        );
+      };
+
+  connection().async_transaction([&](auto txn) {
+        shared_txn = std::make_shared<work>(std::move(txn));
+
+        insert();
+      });
+
+  run();
+
+  pqxx::connection c{CONN_STRING};
+  pqxx::work txn{c};
+  const auto result = txn.exec("SELECT * FROM " TEST_TABLE " WHERE id > " TEST_TABLE_INITIAL_ROWS);
+
+  ASSERT_EQ(0, result.size());
+
+  txn.commit();
+}
+
 TEST_F(ConnectionTest, async_exec_insert_40M_sized_field) {
   std::string data;
 

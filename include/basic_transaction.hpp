@@ -5,6 +5,7 @@
 #include "type_encoder.hpp"
 #include "utility.hpp"
 
+#include <cassert>
 #include <functional>
 #include <tuple>
 
@@ -25,20 +26,35 @@ public:
 
 public:
   basic_transaction(connection_t& c)
-    : c_{c} {
+    : c_{c}
+    , done_{false} {
   }
 
   basic_transaction(const basic_transaction&) = delete;
   basic_transaction(basic_transaction&& rhs) noexcept
-    : c_{std::move(rhs.c_)} {
+    : c_{std::move(rhs.c_)}
+    , done_{std::move(rhs.done_)} {
+    rhs.done_ = true;
   }
 
   basic_transaction& operator=(const basic_transaction&) = delete;
   basic_transaction& operator=(basic_transaction&& rhs) noexcept {
-    c_ = std::move(rhs.c_);
+    using std::swap;
+
+    swap(c_, rhs.c_);
+    swap(done_, rhs.done_);
   }
 
+  /**
+   * Destructor.
+   * If neither \ref commit() nor \ref rollback() has been used, destructing
+   * will do a sync rollback.
+   */
   ~basic_transaction() {
+    if (!done_) {
+      const auto res = PQexec(connection().underlying_handle(), "ROLLBACK");
+      assert(PGRES_COMMAND_OK == PQresultStatus(res));
+    }
   }
   
   /// See \ref async_exec(query, handler, params) for more.
@@ -109,13 +125,15 @@ public:
   }
 
   void commit(commit_handler_t handler) {
-    async_exec("COMMIT", [handler = std::move(handler)](auto&& res) {
+    async_exec("COMMIT", [this, handler = std::move(handler)](auto&& res) {
+          done_ = true;
           handler();
         });
   }
 
   void rollback(rollback_handler_t handler) {
-    async_exec("ROLLBACK", [handler = std::move(handler)](auto&& res) {
+    async_exec("ROLLBACK", [this, handler = std::move(handler)](auto&& res) {
+          done_ = true;
           handler();
         });
   }
@@ -161,6 +179,7 @@ private:
 
 private:
   std::reference_wrapper<connection_t> c_;
+  bool done_;
 };
 
 }
