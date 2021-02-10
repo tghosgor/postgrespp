@@ -1,9 +1,12 @@
 # postgres++
 
-postgres++ is a asynchronous c++ libpq wrapper that aims to make libpq easier
+postgres++ is an asynchronous c++ libpq wrapper that aims to make libpq easier
 to use.
 
-It is designed to be exteremely simple and thin.
+postgres++ makes use of boost.asio for async operations and c++11 variadic
+templates for functions like `PQsendQueryParams` for ease of use.
+It is designed to be exteremely simple and thin. Also, it tries to follow
+the libpqxx interface _very_ loosely.
 
 ## Safer & Easier
 
