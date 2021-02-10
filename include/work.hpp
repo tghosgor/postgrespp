@@ -4,6 +4,6 @@
 
 namespace postgrespp {
 
-using work = basic_transaction<void>;
+using work = basic_transaction<void, void>;
 
 }

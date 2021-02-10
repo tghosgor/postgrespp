@@ -13,11 +13,11 @@ namespace postgrespp {
 
 class basic_connection;
 
-template <class T>
-class basic_transaction : public socket_operations<basic_transaction<T>> {
-  friend class socket_operations<basic_transaction<T>>;
+template <class RWT, class IsolationT>
+class basic_transaction : public socket_operations<basic_transaction<RWT, IsolationT>> {
+  friend class socket_operations<basic_transaction<RWT, IsolationT>>;
 public:
-  using exec_handler_t = typename socket_operations<basic_transaction<T>>::exec_handler_t;
+  using exec_handler_t = typename socket_operations<basic_transaction<RWT, IsolationT>>::exec_handler_t;
   using query_t = query;
   using commit_handler_t = std::function<void ()>;
   using rollback_handler_t = commit_handler_t;

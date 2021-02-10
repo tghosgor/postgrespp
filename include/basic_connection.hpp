@@ -1,5 +1,6 @@
 #pragma once
 
+#include "basic_transaction.hpp"
 #include "query.hpp"
 #include "socket_operations.hpp"
 #include "utility.hpp"
@@ -14,7 +15,7 @@
 
 namespace postgrespp {
 
-template <class>
+template <class, class>
 class basic_transaction;
 
 class result;
@@ -23,10 +24,10 @@ class basic_connection : public socket_operations<basic_connection> {
   friend class socket_operations<basic_connection>;
 public:
   using io_context_t = boost::asio::io_context;
-  using work_t = basic_transaction<void>;
   using result_t = result;
   using prepare_handler_t = std::function<void(result_t)>;
-  using transaction_handler_t = std::function<void(work_t)>;
+  template <class TransactionT>
+  using transaction_handler_t = std::function<void(TransactionT)>;
   using socket_t = boost::asio::ip::tcp::socket;
   using query_t = query;
   using statement_name_t = std::string;
@@ -55,7 +56,15 @@ public:
    * Creates a read/write transaction. Make sure the created transaction
    * object lives until you are done with it.
    */
-  void async_transaction(transaction_handler_t handler);
+  template <
+    class Unused_RWT = void,
+    class Unused_IsolationT = void,
+    class TransactionHandlerT = transaction_handler_t<basic_transaction<Unused_RWT, Unused_IsolationT>>>
+  void async_transaction(TransactionHandlerT handler) {
+    auto w = std::make_shared<basic_transaction<Unused_RWT, Unused_IsolationT>>(*this);
+    w->async_exec("BEGIN",
+        [handler = std::move(handler), w](auto&& res) { handler(std::move(*w)); } );
+  }
 
   PGconn* underlying_handle() { return c_; }
 

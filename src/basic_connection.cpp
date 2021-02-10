@@ -53,12 +53,6 @@ void basic_connection::async_prepare(
   handle_exec(std::move(handler));
 }
 
-void basic_connection::async_transaction(transaction_handler_t handler) {
-  auto w = std::make_shared<work_t>(*this);
-  w->async_exec("BEGIN",
-      [handler = std::move(handler), w](auto&& res) { handler(std::move(*w)); } );
-}
-
 int basic_connection::status() const {
   return PQstatus(c_);
 }

@@ -71,7 +71,7 @@ protected:
 TEST_F(ConnectionTest, async_exec_select) {
   int called = 0;
 
-  connection().async_transaction([&](auto txn) {
+  connection().async_transaction<>([&](auto txn) {
         auto shared_txn = std::make_shared<work>(std::move(txn));
 
         shared_txn->async_exec(
@@ -94,7 +94,7 @@ TEST_F(ConnectionTest, async_exec_select_multi) {
   std::size_t num_calls = 0;
   bool empty_res_seen = false;
 
-  connection().async_transaction([&](auto txn) {
+  connection().async_transaction<>([&](auto txn) {
         auto shared_txn = std::make_shared<work>(std::move(txn));
 
         shared_txn->async_exec_all(
@@ -119,7 +119,7 @@ TEST_F(ConnectionTest, async_exec_select_multi) {
 TEST_F(ConnectionTest, async_exec_select_param) {
   int called = 0;
 
-  connection().async_transaction([&](auto txn) {
+  connection().async_transaction<>([&](auto txn) {
         auto shared_txn = std::make_shared<work>(std::move(txn));
 
         shared_txn->async_exec(
@@ -141,7 +141,7 @@ TEST_F(ConnectionTest, async_exec_select_param) {
 TEST_F(ConnectionTest, async_exec_select_fields) {
   int called = 0;
 
-  connection().async_transaction([&](auto txn) {
+  connection().async_transaction<>([&](auto txn) {
         auto shared_txn = std::make_shared<work>(std::move(txn));
 
         shared_txn->async_exec(
@@ -178,7 +178,7 @@ TEST_F(ConnectionTest, async_exec_select_fields) {
 TEST_F(ConnectionTest, async_exec_select_param_fields) {
   int called = 0;
 
-  connection().async_transaction([&](auto txn) {
+  connection().async_transaction<>([&](auto txn) {
         auto shared_txn = std::make_shared<work>(std::move(txn));
 
         shared_txn->async_exec(
@@ -211,7 +211,7 @@ TEST_F(ConnectionTest, async_exec_prepared_select) {
       [&](auto&& result) {
         ASSERT_TRUE(result.ok());
 
-        connection().async_transaction([&](auto txn) {
+        connection().async_transaction<>([&](auto txn) {
           auto shared_txn = std::make_shared<work>(std::move(txn));
 
           shared_txn->async_exec_prepared(
@@ -271,7 +271,7 @@ TEST_F(ConnectionTest, async_exec_insert_100000) {
         );
       };
 
-  connection().async_transaction([&](auto txn) {
+  connection().async_transaction<>([&](auto txn) {
         shared_txn = std::make_shared<work>(std::move(txn));
 
         insert();
@@ -324,7 +324,7 @@ TEST_F(ConnectionTest, async_exec_prepared_insert_10000) {
                 );
               };
 
-          connection().async_transaction([&](auto txn) {
+          connection().async_transaction<>([&](auto txn) {
                 shared_txn = std::make_shared<work>(std::move(txn));
 
                 insert();
@@ -371,7 +371,7 @@ TEST_F(ConnectionTest, transaction_dtor_with_no_action) {
         );
       };
 
-  connection().async_transaction([&](auto txn) {
+  connection().async_transaction<>([&](auto txn) {
         shared_txn = std::make_shared<work>(std::move(txn));
 
         insert();
@@ -398,7 +398,7 @@ TEST_F(ConnectionTest, async_exec_insert_40M_sized_field) {
     data.push_back('a' + (i % ('z' + 1 - 'a')));
   }
 
-  connection().async_transaction([&](auto txn) {
+  connection().async_transaction<>([&](auto txn) {
         auto shared_txn = std::make_shared<work>(std::move(txn));
 
         shared_txn->async_exec(
@@ -459,7 +459,7 @@ TEST_F(LargeDataTest, select_100000_rows) {
 
   connection c{ioc, CONN_STRING};
 
-  c.async_transaction([&](auto txn) {
+  c.async_transaction<>([&](auto txn) {
         auto shared_txn = std::make_shared<work>(std::move(txn));
 
         shared_txn->async_exec(
