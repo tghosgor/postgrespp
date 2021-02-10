@@ -43,11 +43,13 @@ Unit tests are based on gtest.
 ## Examples
 
 ```c++
+  using namespace postgrespp;
+
   boost::asio::io_context ioc;
 
   connection c{ioc, "host=127.0.0.1 user=postgres"};
 
-  c.transaction([&](auto txn) {
+  c.transaction([](auto txn) {
     // move transaction into a std::shared_ptr to keep it alive in lambdas.
     auto shared_txn = std::make_shared<work>(std::move(txn));
 
