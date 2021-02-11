@@ -31,6 +31,40 @@ protected:
 
 using namespace postgrespp;
 
+TEST_F(AsyncExec, select) {
+  async_exec(connection(), "SELECT * FROM " TEST_TABLE, wrap_handler([](auto&& result) {
+        ASSERT_EQ(result::status_t::TUPLES_OK, result.status());
+        ASSERT_EQ(3, result.size());
+      }));
+
+  run();
+
+  ASSERT_EQ(1, num_calls_);
+}
+
+TEST_F(AsyncExec, select_param) {
+  async_exec(connection(), "SELECT * FROM " TEST_TABLE " WHERE id = $1", wrap_handler([](auto&& result) {
+        ASSERT_EQ(result::status_t::TUPLES_OK, result.status());
+        ASSERT_EQ(1, result.size());
+      }),
+      1);
+
+  run();
+
+  ASSERT_EQ(1, num_calls_);
+}
+
+TEST_F(AsyncExec, insert_param) {
+  async_exec(connection(), "INSERT INTO " TEST_TABLE " (si, i, bi) VALUES ($1, $2, $3)", wrap_handler([](auto&& result) {
+        ASSERT_EQ(result::status_t::COMMAND_OK, result.status()) << result.error_message();
+      }),
+      static_cast<std::int16_t>(1), 2, static_cast<std::int64_t>(3));
+
+  run();
+
+  ASSERT_EQ(1, num_calls_);
+}
+
 TEST_F(AsyncExec, transaction_select) {
   connection().async_transaction<>([this](auto txn) {
         auto s_txn = std::make_shared<work>(std::move(txn));
@@ -58,29 +92,6 @@ TEST_F(AsyncExec, transaction_select_param) {
             }),
             1);
       });
-
-  run();
-
-  ASSERT_EQ(1, num_calls_);
-}
-
-TEST_F(AsyncExec, select) {
-  async_exec(connection(), "SELECT * FROM " TEST_TABLE, wrap_handler([](auto&& result) mutable {
-        ASSERT_EQ(result::status_t::TUPLES_OK, result.status());
-        ASSERT_EQ(3, result.size());
-      }));
-
-  run();
-
-  ASSERT_EQ(1, num_calls_);
-}
-
-TEST_F(AsyncExec, select_param) {
-  async_exec(connection(), "SELECT * FROM " TEST_TABLE " WHERE id = $1", wrap_handler([](auto&& result) mutable {
-        ASSERT_EQ(result::status_t::TUPLES_OK, result.status());
-        ASSERT_EQ(1, result.size());
-      }),
-      1);
 
   run();
 

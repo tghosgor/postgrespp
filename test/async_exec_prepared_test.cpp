@@ -76,7 +76,7 @@ TEST_F(AsyncExecPrepared, select) {
   connection().async_prepare("stmt", "SELECT * FROM " TEST_TABLE, [this](auto&& result) {
         ASSERT_EQ(result::status_t::COMMAND_OK, result.status()) << result.error_message();
 
-        async_exec_prepared(connection(), "stmt", wrap_handler([](auto&& result) mutable {
+        async_exec_prepared(connection(), "stmt", wrap_handler([](auto&& result) {
               ASSERT_EQ(result::status_t::TUPLES_OK, result.status());
               ASSERT_EQ(3, result.size());
             }));
@@ -91,7 +91,7 @@ TEST_F(AsyncExecPrepared, select_param) {
   connection().async_prepare("stmt", "SELECT * FROM " TEST_TABLE " WHERE id = $1", [this](auto&& result) {
         ASSERT_EQ(result::status_t::COMMAND_OK, result.status()) << result.error_message();
 
-        async_exec_prepared(connection(), "stmt", wrap_handler([](auto&& result) mutable {
+        async_exec_prepared(connection(), "stmt", wrap_handler([](auto&& result) {
               ASSERT_EQ(result::status_t::TUPLES_OK, result.status());
               ASSERT_EQ(1, result.size());
             }),
