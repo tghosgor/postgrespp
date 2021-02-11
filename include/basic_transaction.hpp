@@ -6,7 +6,6 @@
 #include "utility.hpp"
 
 #include <cassert>
-#include <functional>
 #include <tuple>
 
 namespace postgrespp {
@@ -17,10 +16,7 @@ template <class RWT, class IsolationT>
 class basic_transaction : public socket_operations<basic_transaction<RWT, IsolationT>> {
   friend class socket_operations<basic_transaction<RWT, IsolationT>>;
 public:
-  using exec_handler_t = typename socket_operations<basic_transaction<RWT, IsolationT>>::exec_handler_t;
   using query_t = query;
-  using commit_handler_t = std::function<void ()>;
-  using rollback_handler_t = commit_handler_t;
   using connection_t = ::postgrespp::basic_connection;
   using statement_name_t = std::string;
 
@@ -58,12 +54,14 @@ public:
   }
   
   /// See \ref async_exec(query, handler, params) for more.
-  void async_exec(const query_t& query, exec_handler_t handler) {
+  template <class ResultCallableT>
+  void async_exec(const query_t& query, ResultCallableT&& handler) {
     async_exec_2(query, std::move(handler), nullptr, nullptr, nullptr, 0);
   }
 
   /// See \ref async_exec_prepared(statement_name, handler, params) for more.
-  void async_exec_prepared(const statement_name_t& statement_name, exec_handler_t handler) {
+  template <class ResultCallableT>
+  void async_exec_prepared(const statement_name_t& statement_name, ResultCallableT&& handler) {
     async_exec_prepared_2(statement_name, std::move(handler), nullptr, nullptr, nullptr, 0);
   }
 
@@ -74,8 +72,8 @@ public:
    * \p handler will be called once with the result.
    * \p params parameters to pass in the same order to $1, $2, ...
    */
-  template <class... Params>
-  void async_exec(const query_t& query, exec_handler_t handler, Params&&... params) {
+  template <class ResultCallableT, class... Params>
+  void async_exec(const query_t& query, ResultCallableT&& handler, Params&&... params) {
     using namespace utility;
 
     const auto value_holders = create_value_holders(params...);
@@ -93,8 +91,8 @@ public:
    * \p handler will be called once with the result.
    * \p params parameters to pass in the same order to $1, $2, ...
    */
-  template <class... Params>
-  void async_exec_prepared(const statement_name_t& statement_name, exec_handler_t handler, Params&&... params) {
+  template <class ResultCallableT, class... Params>
+  void async_exec_prepared(const statement_name_t& statement_name, ResultCallableT&& handler, Params&&... params) {
     using namespace utility;
 
     const auto value_holders = create_value_holders(params...);
@@ -113,7 +111,8 @@ public:
    * \p handler will be called once for each query and once more with an
    * empty result where \ref result.done() returns true.
    */
-  void async_exec_all(const query_t& query, exec_handler_t handler) {
+  template <class ResultCallableT>
+  void async_exec_all(const query_t& query, ResultCallableT&& handler) {
     assert(!done_);
 
     const auto res = PQsendQuery(connection().underlying_handle(),
@@ -126,17 +125,19 @@ public:
     this->handle_exec_all(std::move(handler));
   }
 
-  void commit(commit_handler_t handler) {
-    async_exec("COMMIT", [this, handler = std::move(handler)](auto&& res) {
+  template <class ResultCallableT>
+  void commit(ResultCallableT&& handler) {
+    async_exec("COMMIT", [this, handler = std::move(handler)](auto&& res) mutable {
           done_ = true;
-          handler();
+          handler(std::move(res));
         });
   }
 
-  void rollback(rollback_handler_t handler) {
-    async_exec("ROLLBACK", [this, handler = std::move(handler)](auto&& res) {
+  template <class ResultCallableT>
+  void rollback(ResultCallableT&& handler) {
+    async_exec("ROLLBACK", [this, handler = std::move(handler)](auto&& res) mutable {
           done_ = true;
-          handler();
+          handler(std::move(res));
         });
   }
 
@@ -146,7 +147,8 @@ protected:
   auto& connection() { return c_.get(); }
 
 private:
-  void async_exec_2(const query_t& query, exec_handler_t handler, const char* const* value_arr, const int* size_arr, const int* type_arr, std::size_t num_values) {
+  template <class ResultCallableT>
+  void async_exec_2(const query_t& query, ResultCallableT&& handler, const char* const* value_arr, const int* size_arr, const int* type_arr, std::size_t num_values) {
     assert(!done_);
 
     const auto res = PQsendQueryParams(connection().underlying_handle(),
@@ -165,7 +167,8 @@ private:
     this->handle_exec(std::move(handler));
   }
 
-  void async_exec_prepared_2(const statement_name_t& statement_name, exec_handler_t handler, const char* const* value_arr, const int* size_arr, const int* type_arr, std::size_t num_values) {
+  template <class ResultCallableT>
+  void async_exec_prepared_2(const statement_name_t& statement_name, ResultCallableT&& handler, const char* const* value_arr, const int* size_arr, const int* type_arr, std::size_t num_values) {
     assert(!done_);
 
     const auto res = PQsendQueryPrepared(connection().underlying_handle(),

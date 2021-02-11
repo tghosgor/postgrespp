@@ -5,7 +5,6 @@
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/error.hpp>
 
-#include <functional>
 #include <stdexcept>
 
 namespace postgrespp {
@@ -16,7 +15,6 @@ template <class DerivedT>
 class socket_operations {
 public:
   using result_t = result;
-  using exec_handler_t = std::function<void (result_t)>;
 
 private:
   using error_code_t = boost::system::error_code;
@@ -29,8 +27,9 @@ protected:
 
   ~socket_operations() = default;
 
-  void handle_exec(exec_handler_t handler) {
-    auto wrapped_handler = [handler = std::move(handler), r = std::make_shared<result>(nullptr)](auto&& res) {
+  template <class ResultCallableT>
+  void handle_exec(ResultCallableT&& handler) {
+    auto wrapped_handler = [handler = std::move(handler), r = std::make_shared<result>(nullptr)](auto&& res) mutable {
       if (!res.done()) {
         if (!r->done()) throw std::runtime_error{"expected one result"};
         *r = std::move(res);
@@ -43,17 +42,20 @@ protected:
     wait_write_ready();
   }
 
-  void handle_exec_all(exec_handler_t handler) {
+  template <class ResultCallableT>
+  void handle_exec_all(ResultCallableT&& handler) {
     wait_read_ready(std::move(handler));
     wait_write_ready();
   }
 
 private:
-  void wait_read_ready(exec_handler_t handler) {
+  template <class ResultCallableT>
+  void wait_read_ready(ResultCallableT&& handler) {
     namespace ph = std::placeholders;
 
     derived().socket().async_read_some(boost::asio::null_buffers(),
-        std::bind(&socket_operations::on_read_ready, this, std::move(handler), ph::_1));
+        [this, handler = std::move(handler)](auto&& ec, auto&& bt) mutable {
+          on_read_ready(std::move(handler), ec); });
   }
 
   void wait_write_ready() {
@@ -63,7 +65,8 @@ private:
         std::bind(&socket_operations::on_write_ready, this, ph::_1));
   }
 
-  void on_read_ready(exec_handler_t handler, const error_code_t& ec) {
+  template <class ResultCallableT>
+  void on_read_ready(ResultCallableT&& handler, const error_code_t& ec) {
     if (!ec) {
       while (true) {
         if (PQconsumeInput(derived().connection().underlying_handle()) != 1) {

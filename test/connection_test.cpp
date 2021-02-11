@@ -1,3 +1,5 @@
+#include "example_data_fixture.hpp"
+
 #include <connection.hpp>
 #include <work.hpp>
 
@@ -7,11 +9,6 @@
 
 #include <cstdint>
 #include <optional>
-
-#define TEST_TABLE "tbl_test"
-#define TEST_TABLE_INITIAL_ROWS "3"
-
-#define CONN_STRING "host=127.0.0.1 user=postgres"
 
 using namespace postgrespp;
 
@@ -29,33 +26,8 @@ TEST(ExternalIocConnectionTest, external_ioc_construct) {
   ioc.run();
 }
 
-class ConnectionTest : public ::testing::Test {
+class ConnectionTest : public example_data_fixture {
 protected:
-  using connection_t = ::postgrespp::connection;
-
-protected:
-  void SetUp() override {
-    pqxx::connection c{CONN_STRING};
-    pqxx::work txn{c};
-
-    txn.exec("DROP TABLE IF EXISTS " TEST_TABLE);
-    txn.exec("CREATE TABLE " TEST_TABLE " (id serial NOT NULL, si smallint, i int, bi bigint, t text)");
-    txn.exec("INSERT INTO " TEST_TABLE " (si, i, bi, t) VALUES (10, 20, 40, 'row 0')");
-    txn.exec("INSERT INTO " TEST_TABLE " (si, i, bi, t) VALUES (11, 22, 44, 'row 1')");
-    txn.exec("INSERT INTO " TEST_TABLE " (si, i, bi, t) VALUES (NULL, NULL, NULL, NULL)");
-
-    txn.commit();
-  }
-
-  void TearDown() override {
-    pqxx::connection c{CONN_STRING};
-    pqxx::work txn{c};
-
-    txn.exec("DROP TABLE " TEST_TABLE);
-
-    txn.commit();
-  }
-
   void run() {
     ioc_.run();
     c_.reset();
@@ -264,7 +236,7 @@ TEST_F(ConnectionTest, async_exec_insert_100000) {
             if (insertions < 100000) {
               insert();
             } else {
-              shared_txn->commit([shared_txn]() { ; });
+              shared_txn->commit([shared_txn](auto&& res) { ASSERT_TRUE(res.ok()); });
             }
           },
           static_cast<std::int16_t>(1), 2, static_cast<std::int64_t>(insertions), "my row text"
@@ -317,7 +289,7 @@ TEST_F(ConnectionTest, async_exec_prepared_insert_10000) {
                     if (insertions < 10000) {
                       insert();
                     } else {
-                      shared_txn->commit([shared_txn]() { ; });
+                      shared_txn->commit([shared_txn](auto&& res) { ASSERT_TRUE(res.ok()); });
                     }
                   },
                   static_cast<std::int16_t>(1), 2, static_cast<std::int64_t>(insertions), "my row text"
@@ -404,7 +376,8 @@ TEST_F(ConnectionTest, async_exec_insert_40M_sized_field) {
         shared_txn->async_exec(
             "INSERT INTO " TEST_TABLE " (t) VALUES ($1)",
             [&, shared_txn](auto result) {
-              shared_txn->commit([shared_txn]{});
+              ASSERT_EQ(result::status_t::COMMAND_OK, result.status());
+              shared_txn->commit([shared_txn](auto&& res) { ASSERT_TRUE(res.ok()); });
             },
             data);
       });

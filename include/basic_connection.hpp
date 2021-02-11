@@ -10,7 +10,6 @@
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
-#include <functional>
 #include <string>
 
 namespace postgrespp {
@@ -25,9 +24,6 @@ class basic_connection : public socket_operations<basic_connection> {
 public:
   using io_context_t = boost::asio::io_context;
   using result_t = result;
-  using prepare_handler_t = std::function<void(result_t)>;
-  template <class TransactionT>
-  using transaction_handler_t = std::function<void(TransactionT)>;
   using socket_t = boost::asio::ip::tcp::socket;
   using query_t = query;
   using statement_name_t = std::string;
@@ -47,10 +43,23 @@ public:
   basic_connection(basic_connection&&) = delete;
   basic_connection& operator=(basic_connection&&) = delete;
 
+  template <class ResultCallableT>
   void async_prepare(
       const statement_name_t& statement_name,
       const query_t& query,
-      prepare_handler_t handler);
+      ResultCallableT&& handler) {
+    const auto res = PQsendPrepare(connection().underlying_handle(),
+        statement_name.c_str(),
+        query.c_str(),
+        0,
+        nullptr);
+
+    if (res != 1) {
+      throw std::runtime_error{"error preparing statement '" + statement_name + "': " + std::string{connection().last_error()}};
+    }
+
+    handle_exec(std::move(handler));
+  }
 
   /**
    * Creates a read/write transaction. Make sure the created transaction
@@ -59,11 +68,11 @@ public:
   template <
     class Unused_RWT = void,
     class Unused_IsolationT = void,
-    class TransactionHandlerT = transaction_handler_t<basic_transaction<Unused_RWT, Unused_IsolationT>>>
-  void async_transaction(TransactionHandlerT handler) {
+    class TransactionHandlerT>
+  void async_transaction(TransactionHandlerT&& handler) {
     auto w = std::make_shared<basic_transaction<Unused_RWT, Unused_IsolationT>>(*this);
     w->async_exec("BEGIN",
-        [handler = std::move(handler), w](auto&& res) { handler(std::move(*w)); } );
+        [handler = std::move(handler), w](auto&& res) mutable { handler(std::move(*w)); } );
   }
 
   PGconn* underlying_handle() { return c_; }

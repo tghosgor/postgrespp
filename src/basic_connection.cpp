@@ -36,23 +36,6 @@ basic_connection::~basic_connection() {
   PQfinish(c_);
 }
 
-void basic_connection::async_prepare(
-    const statement_name_t& statement_name,
-    const query_t& query,
-    prepare_handler_t handler) {
-  const auto res = PQsendPrepare(connection().underlying_handle(),
-      statement_name.c_str(),
-      query.c_str(),
-      0,
-      nullptr);
-
-  if (res != 1) {
-    throw std::runtime_error{"error preparing statement '" + statement_name + "': " + std::string{connection().last_error()}};
-  }
-
-  handle_exec(std::move(handler));
-}
-
 int basic_connection::status() const {
   return PQstatus(c_);
 }

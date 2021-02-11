@@ -31,14 +31,18 @@ public:
     : res_{result} {
   }
 
+  result(const result& other) = delete;
+
   result(result&& other) noexcept
     : res_{other.res_} {
     other.res_ = nullptr;
   }
 
+  result& operator=(const result& other) = delete;
+
   result& operator=(result&& other) noexcept {
-    res_ = other.res_;
-    other.res_ = nullptr;
+    using std::swap;
+    swap(res_, other.res_);
 
     return *this;
   }
