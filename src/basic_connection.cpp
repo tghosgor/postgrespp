@@ -33,7 +33,8 @@ basic_connection::basic_connection(io_context_t& ioc, const char* const& pgconni
 }
 
 basic_connection::~basic_connection() {
-  PQfinish(c_);
+  if (c_)
+    PQfinish(c_);
 }
 
 int basic_connection::status() const {

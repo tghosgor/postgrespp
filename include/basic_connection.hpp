@@ -11,6 +11,7 @@
 #include <boost/asio/ip/tcp.hpp>
 
 #include <string>
+#include <utility>
 
 namespace postgrespp {
 
@@ -38,10 +39,23 @@ public:
   ~basic_connection();
 
   basic_connection(basic_connection const&) = delete;
+
+  basic_connection(basic_connection&& rhs) noexcept
+    : socket_{std::move(rhs.socket_)}
+    , c_{std::move(rhs.c_)} {
+    rhs.c_ = nullptr;
+  }
+
   basic_connection& operator=(basic_connection const&) = delete;
 
-  basic_connection(basic_connection&&) = delete;
-  basic_connection& operator=(basic_connection&&) = delete;
+  basic_connection& operator=(basic_connection&& rhs) noexcept {
+    using std::swap;
+
+    swap(socket_, rhs.socket_);
+    swap(c_, rhs.c_);
+
+    return *this;
+  }
 
   template <class ResultCallableT>
   void async_prepare(
