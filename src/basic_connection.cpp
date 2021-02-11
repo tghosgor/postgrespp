@@ -29,7 +29,12 @@ basic_connection::basic_connection(io_context_t& ioc, const char* const& pgconni
   if (PQsetnonblocking(c_, 1) != 0)
     throw std::runtime_error{"could not set non-blocking: " + std::string{PQerrorMessage(c_)}};
 
-  socket_.assign(boost::asio::ip::tcp::v4(), PQsocket(c_));
+  const auto socket = PQsocket(c_);
+
+  if (socket < 0)
+    throw std::runtime_error{"could not get a valid descriptor"};
+
+  socket_.assign(boost::asio::ip::tcp::v4(), socket);
 }
 
 basic_connection::~basic_connection() {

@@ -20,6 +20,9 @@ public:
   using connection_t = ::postgrespp::basic_connection;
   using statement_name_t = std::string;
 
+private:
+  using result_t = typename socket_operations<basic_transaction<RWT, IsolationT>>::result_t;
+
 public:
   basic_transaction(connection_t& c)
     : c_{c}
@@ -48,8 +51,8 @@ public:
    */
   ~basic_transaction() {
     if (!done_) {
-      const auto res = PQexec(connection().underlying_handle(), "ROLLBACK");
-      assert(PGRES_COMMAND_OK == PQresultStatus(res));
+      const result_t res{PQexec(connection().underlying_handle(), "ROLLBACK")};
+      assert(result_t::status_t::COMMAND_OK == res.status());
     }
   }
   
