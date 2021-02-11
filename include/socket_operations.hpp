@@ -67,35 +67,33 @@ private:
 
   template <class ResultCallableT>
   void on_read_ready(ResultCallableT&& handler, const error_code_t& ec) {
-    if (!ec) {
-      while (true) {
-        if (PQconsumeInput(derived().connection().underlying_handle()) != 1) {
-          throw std::runtime_error{
-            "consume input failed: " + std::string{derived().connection().last_error_message()}};
-        }
+    while (true) {
+      if (PQconsumeInput(derived().connection().underlying_handle()) != 1) {
+        throw std::runtime_error{
+          "consume input failed: " + std::string{derived().connection().last_error_message()}};
+      }
 
-        const auto flush = PQflush(derived().connection().underlying_handle());
-        if (flush == 1) {
+      const auto flush = PQflush(derived().connection().underlying_handle());
+      if (flush == 1) {
+        wait_read_ready(std::forward<ResultCallableT>(handler));
+        break;
+      } else if (flush == 0) {
+        if (PQisBusy(derived().connection().underlying_handle()) == 1) {
           wait_read_ready(std::forward<ResultCallableT>(handler));
           break;
-        } else if (flush == 0) {
-          if (PQisBusy(derived().connection().underlying_handle()) == 1) {
-            wait_read_ready(std::forward<ResultCallableT>(handler));
-            break;
-          } else {
-            const auto pqres = PQgetResult(derived().connection().underlying_handle());
-
-            result res{pqres};
-            handler(std::move(res));
-
-            if (!pqres) {
-              break;
-            }
-          }
         } else {
-          throw std::runtime_error{
-            "flush failed: " + std::string{derived().connection().last_error_message()}};
+          const auto pqres = PQgetResult(derived().connection().underlying_handle());
+
+          result res{pqres};
+          handler(std::move(res));
+
+          if (!pqres) {
+            break;
+          }
         }
+      } else {
+        throw std::runtime_error{
+          "flush failed: " + std::string{derived().connection().last_error_message()}};
       }
     }
   }
