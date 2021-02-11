@@ -69,7 +69,8 @@ public:
         nullptr);
 
     if (res != 1) {
-      throw std::runtime_error{"error preparing statement '" + statement_name + "': " + std::string{connection().last_error()}};
+      throw std::runtime_error{
+        "error preparing statement '" + statement_name + "': " + std::string{connection().last_error_message()}};
     }
 
     handle_exec(std::forward<ResultCallableT>(handler));
@@ -95,7 +96,7 @@ public:
 
   socket_t& socket() { return socket_; }
 
-  const char* last_error() const { return PQerrorMessage(underlying_handle()); }
+  const char* last_error_message() const { return PQerrorMessage(underlying_handle()); }
 
 private:
   int status() const;

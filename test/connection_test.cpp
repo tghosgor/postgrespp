@@ -59,7 +59,7 @@ TEST_F(ConnectionTest, async_exec_select) {
 
   run();
 
-  ASSERT_EQ(1, called) << connection().last_error();
+  ASSERT_EQ(1, called) << connection().last_error_message();
 }
 
 TEST_F(ConnectionTest, async_exec_select_multi) {
@@ -107,7 +107,7 @@ TEST_F(ConnectionTest, async_exec_select_param) {
 
   run();
 
-  ASSERT_EQ(1, called) << connection().last_error();
+  ASSERT_EQ(1, called) << connection().last_error_message();
 }
 
 TEST_F(ConnectionTest, async_exec_select_fields) {
@@ -144,7 +144,7 @@ TEST_F(ConnectionTest, async_exec_select_fields) {
 
   run();
 
-  ASSERT_EQ(1, called) << connection().last_error();
+  ASSERT_EQ(1, called) << connection().last_error_message();
 }
 
 TEST_F(ConnectionTest, async_exec_select_param_fields) {
@@ -173,7 +173,7 @@ TEST_F(ConnectionTest, async_exec_select_param_fields) {
 
   run();
 
-  ASSERT_EQ(1, called) << connection().last_error();
+  ASSERT_EQ(1, called) << connection().last_error_message();
 }
 
 TEST_F(ConnectionTest, async_exec_prepared_select) {
@@ -215,7 +215,7 @@ TEST_F(ConnectionTest, async_exec_prepared_select) {
 
   run();
 
-  ASSERT_EQ(1, called) << connection().last_error();
+  ASSERT_EQ(1, called) << connection().last_error_message();
 }
 
 TEST_F(ConnectionTest, async_exec_insert_100000) {

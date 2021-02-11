@@ -70,7 +70,8 @@ private:
     if (!ec) {
       while (true) {
         if (PQconsumeInput(derived().connection().underlying_handle()) != 1) {
-          throw std::runtime_error{"consume input failed"};
+          throw std::runtime_error{
+            "consume input failed: " + std::string{derived().connection().last_error_message()}};
         }
 
         const auto flush = PQflush(derived().connection().underlying_handle());
@@ -92,7 +93,8 @@ private:
             }
           }
         } else {
-          throw std::runtime_error{"flush failed"};
+          throw std::runtime_error{
+            "flush failed: " + std::string{derived().connection().last_error_message()}};
         }
       }
     }
@@ -102,6 +104,9 @@ private:
     const auto ret = PQflush(derived().connection().underlying_handle());
     if (ret == 1) {
       wait_write_ready();
+    } else if (ret != 0) {
+      throw std::runtime_error{
+        "flush failed: " + std::string{derived().connection().last_error_message()}};
     }
   }
 

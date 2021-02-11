@@ -131,7 +131,8 @@ public:
         query.c_str());
 
     if (res != 1) {
-      throw std::runtime_error{"error executing query: " + std::string{connection().last_error()}};
+      throw std::runtime_error{
+        "error executing query: " + std::string{connection().last_error_message()}};
     }
 
     this->handle_exec_all(std::forward<ResultCallableT>(handler));
@@ -160,7 +161,9 @@ protected:
 
 private:
   template <class ResultCallableT>
-  void async_exec_2(const query_t& query, ResultCallableT&& handler, const char* const* value_arr, const int* size_arr, const int* type_arr, std::size_t num_values) {
+  void async_exec_2(const query_t& query, ResultCallableT&& handler,
+      const char* const* value_arr, const int* size_arr, const int* type_arr,
+      std::size_t num_values) {
     assert(!done_);
 
     const auto res = PQsendQueryParams(connection().underlying_handle(),
@@ -173,14 +176,17 @@ private:
         1);
 
     if (res != 1) {
-      throw std::runtime_error{"error executing query '" + query + "': " + std::string{connection().last_error()}};
+      throw std::runtime_error{
+        "error executing query '" + query + "': " + std::string{connection().last_error_message()}};
     }
 
     this->handle_exec(std::forward<ResultCallableT>(handler));
   }
 
   template <class ResultCallableT>
-  void async_exec_prepared_2(const statement_name_t& statement_name, ResultCallableT&& handler, const char* const* value_arr, const int* size_arr, const int* type_arr, std::size_t num_values) {
+  void async_exec_prepared_2(const statement_name_t& statement_name,
+      ResultCallableT&& handler, const char* const* value_arr,
+      const int* size_arr, const int* type_arr, std::size_t num_values) {
     assert(!done_);
 
     const auto res = PQsendQueryPrepared(connection().underlying_handle(),
@@ -192,7 +198,8 @@ private:
         1);
 
     if (res != 1) {
-      throw std::runtime_error{"error executing query '" + statement_name + "': " + std::string{connection().last_error()}};
+      throw std::runtime_error{
+        "error executing query '" + statement_name + "': " + std::string{connection().last_error_message()}};
     }
 
     this->handle_exec(std::forward<ResultCallableT>(handler));
