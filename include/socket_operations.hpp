@@ -44,7 +44,7 @@ protected:
 
   template <class ResultCallableT>
   void handle_exec_all(ResultCallableT&& handler) {
-    wait_read_ready(std::move(handler));
+    wait_read_ready(std::forward<ResultCallableT>(handler));
     wait_write_ready();
   }
 
@@ -75,11 +75,11 @@ private:
 
         const auto flush = PQflush(derived().connection().underlying_handle());
         if (flush == 1) {
-          wait_read_ready(std::move(handler));
+          wait_read_ready(std::forward<ResultCallableT>(handler));
           break;
         } else if (flush == 0) {
           if (PQisBusy(derived().connection().underlying_handle()) == 1) {
-            wait_read_ready(std::move(handler));
+            wait_read_ready(std::forward<ResultCallableT>(handler));
             break;
           } else {
             const auto pqres = PQgetResult(derived().connection().underlying_handle());

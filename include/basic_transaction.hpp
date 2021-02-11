@@ -59,13 +59,13 @@ public:
   /// See \ref async_exec(query, handler, params) for more.
   template <class ResultCallableT>
   void async_exec(const query_t& query, ResultCallableT&& handler) {
-    async_exec_2(query, std::move(handler), nullptr, nullptr, nullptr, 0);
+    async_exec_2(query, std::forward<ResultCallableT>(handler), nullptr, nullptr, nullptr, 0);
   }
 
   /// See \ref async_exec_prepared(statement_name, handler, params) for more.
   template <class ResultCallableT>
   void async_exec_prepared(const statement_name_t& statement_name, ResultCallableT&& handler) {
-    async_exec_prepared_2(statement_name, std::move(handler), nullptr, nullptr, nullptr, 0);
+    async_exec_prepared_2(statement_name, std::forward<ResultCallableT>(handler), nullptr, nullptr, nullptr, 0);
   }
 
   /**
@@ -86,7 +86,8 @@ public:
     const auto size_arr = size_array(params...);
     const auto type_arr = type_array(params...);
 
-    async_exec_2(query, std::move(handler), value_arr.data(), size_arr.data(), type_arr.data(), sizeof...(params));
+    async_exec_2(query, std::forward<ResultCallableT>(handler),
+        value_arr.data(), size_arr.data(), type_arr.data(), sizeof...(params));
   }
 
   /**
@@ -107,7 +108,8 @@ public:
     const auto size_arr = size_array(params...);
     const auto type_arr = type_array(params...);
 
-    async_exec_prepared_2(statement_name, std::move(handler), value_arr.data(),
+    async_exec_prepared_2(statement_name, std::forward<ResultCallableT>(handler),
+        value_arr.data(),
         size_arr.data(), type_arr.data(), sizeof...(params));
   }
 
@@ -132,14 +134,14 @@ public:
       throw std::runtime_error{"error executing query: " + std::string{connection().last_error()}};
     }
 
-    this->handle_exec_all(std::move(handler));
+    this->handle_exec_all(std::forward<ResultCallableT>(handler));
   }
 
   template <class ResultCallableT>
   void commit(ResultCallableT&& handler) {
     async_exec("COMMIT", [this, handler = std::move(handler)](auto&& res) mutable {
           done_ = true;
-          handler(std::move(res));
+          handler(std::forward<decltype(res)>(res));
         });
   }
 
@@ -147,7 +149,7 @@ public:
   void rollback(ResultCallableT&& handler) {
     async_exec("ROLLBACK", [this, handler = std::move(handler)](auto&& res) mutable {
           done_ = true;
-          handler(std::move(res));
+          handler(std::forward<decltype(res)>(res));
         });
   }
 
@@ -174,7 +176,7 @@ private:
       throw std::runtime_error{"error executing query '" + query + "': " + std::string{connection().last_error()}};
     }
 
-    this->handle_exec(std::move(handler));
+    this->handle_exec(std::forward<ResultCallableT>(handler));
   }
 
   template <class ResultCallableT>
@@ -193,7 +195,7 @@ private:
       throw std::runtime_error{"error executing query '" + statement_name + "': " + std::string{connection().last_error()}};
     }
 
-    this->handle_exec(std::move(handler));
+    this->handle_exec(std::forward<ResultCallableT>(handler));
   }
 
 private:

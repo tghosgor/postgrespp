@@ -72,7 +72,7 @@ public:
       throw std::runtime_error{"error preparing statement '" + statement_name + "': " + std::string{connection().last_error()}};
     }
 
-    handle_exec(std::move(handler));
+    handle_exec(std::forward<ResultCallableT>(handler));
   }
 
   /**
