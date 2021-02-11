@@ -49,16 +49,47 @@ Unit tests are based on gtest.
 
   connection c{ioc, "host=127.0.0.1 user=postgres"};
 
+  async_exec(c, "SELECT * FROM tbl_test", [](auto&& result) {
+    assert(result.ok());
+  });
+
+  ioc.run();
+```
+
+```c++
+  using namespace postgrespp;
+
+  boost::asio::io_context ioc;
+
+  connection c{ioc, "host=127.0.0.1 user=postgres"};
+
+  async_exec(connection(),
+    "INSERT INTO tbl_test (si, i, bi) VALUES ($1, $2, $3)",
+    [](auto&& result) {
+        assert(result.ok());
+    },
+    static_cast<std::int16_t>(1), 2, static_cast<std::int64_t>(3));
+
+  ioc.run();
+```
+
+```c++
+  using namespace postgrespp;
+
+  boost::asio::io_context ioc;
+
+  connection c{ioc, "host=127.0.0.1 user=postgres"};
+
   c.transaction<>([](auto txn) {
     // move transaction into a std::shared_ptr to keep it alive in lambdas.
     auto shared_txn = std::make_shared<work>(std::move(txn));
 
     shared_txn->async_exec(
       "SELECT * FROM tbl_test WHERE id = $1",
-      [shared_txn](auto&& result) {
+      [shared_txn](auto&& result) mutable {
         assert(result.ok());
 
-        shared_txn->commit([shared_txn](auto&& commit_result) {
+        shared_txn->commit([shared_txn](auto&& commit_result) mutable {
           assert(commit_result.ok());
 
           std::cout << "We are done." << std::endl;

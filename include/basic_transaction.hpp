@@ -71,6 +71,8 @@ public:
    * \ref async_exec_all(query, handler, params).
    * \p handler will be called once with the result.
    * \p params parameters to pass in the same order to $1, $2, ...
+   *
+   * This function must not be called again before the handler is called.
    */
   template <class ResultCallableT, class... Params>
   void async_exec(const query_t& query, ResultCallableT&& handler, Params&&... params) {
@@ -90,6 +92,8 @@ public:
    * \ref async_exec_all(query, handler, params).
    * \p handler will be called once with the result.
    * \p params parameters to pass in the same order to $1, $2, ...
+   *
+   * This function must not be called again before the handler is called.
    */
   template <class ResultCallableT, class... Params>
   void async_exec_prepared(const statement_name_t& statement_name, ResultCallableT&& handler, Params&&... params) {
@@ -110,6 +114,9 @@ public:
    * support parameter binding.
    * \p handler will be called once for each query and once more with an
    * empty result where \ref result.done() returns true.
+   *
+   * This function must not be called again before the handler is called
+   * with a result where \ref result.done() returns true.
    */
   template <class ResultCallableT>
   void async_exec_all(const query_t& query, ResultCallableT&& handler) {

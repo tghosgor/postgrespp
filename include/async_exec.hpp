@@ -10,6 +10,7 @@ namespace postgrespp {
 
 /**
  * Asynchronously executes a query.
+ * This function must not be called again before the handler is called.
  */
 template <class RWT, class IsolationT, class TransactionHandlerT, class... Params>
 void async_exec(basic_transaction<RWT, IsolationT>& t, const query& query,
@@ -19,6 +20,7 @@ void async_exec(basic_transaction<RWT, IsolationT>& t, const query& query,
 
 /**
  * Starts a transaction, asynchronously executes a query and commits the transaction.
+ * This function must not be called again before the handler is called.
  */
 template <class ResultCallableT, class... Params>
 void async_exec(basic_connection& c, query query,
