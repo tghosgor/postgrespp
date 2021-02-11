@@ -63,7 +63,7 @@ Unit tests are based on gtest.
 
   connection c{ioc, "host=127.0.0.1 user=postgres"};
 
-  async_exec(connection(),
+  async_exec(c,
     "INSERT INTO tbl_test (si, i, bi) VALUES ($1, $2, $3)",
     [](auto&& result) {
         assert(result.ok());
