@@ -2,6 +2,7 @@
 
 #include "result.hpp"
 
+#include <boost/asio/async_result.hpp>
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/error.hpp>
 
@@ -28,24 +29,37 @@ protected:
   ~socket_operations() = default;
 
   template <class ResultCallableT>
-  void handle_exec(ResultCallableT&& handler) {
-    auto wrapped_handler = [handler = std::move(handler), r = std::make_shared<result>(nullptr)](auto&& res) mutable {
-      if (!res.done()) {
-        if (!r->done()) throw std::runtime_error{"expected one result"};
-        *r = std::move(res);
-      } else {
-        handler(std::move(*r));
-      }
+  auto handle_exec(ResultCallableT&& handler) {
+    auto initiation = [this](auto&& handler) {
+      auto wrapped_handler = [handler = std::move(handler),
+           r = std::make_shared<result>(nullptr)](auto&& res) mutable {
+        if (!res.done()) {
+          if (!r->done()) throw std::runtime_error{"expected one result"};
+          *r = std::move(res);
+        } else {
+          handler(std::move(*r));
+        }
+      };
+
+      wait_read_ready(std::move(wrapped_handler));
+      wait_write_ready();
     };
 
-    wait_read_ready(std::move(wrapped_handler));
-    wait_write_ready();
+    return boost::asio::async_initiate<
+      ResultCallableT, void(result_t)>(
+          initiation, handler);
   }
 
   template <class ResultCallableT>
-  void handle_exec_all(ResultCallableT&& handler) {
-    wait_read_ready(std::forward<ResultCallableT>(handler));
-    wait_write_ready();
+  auto handle_exec_all(ResultCallableT&& handler) {
+    auto initiation = [this](auto&& handler) {
+      wait_read_ready(std::forward<ResultCallableT>(handler));
+      wait_write_ready();
+    };
+
+    return boost::asio::async_initiate<
+      ResultCallableT, void(result_t)>(
+          initiation, handler);
   }
 
 private:
@@ -53,15 +67,15 @@ private:
   void wait_read_ready(ResultCallableT&& handler) {
     namespace ph = std::placeholders;
 
-    derived().socket().async_read_some(boost::asio::null_buffers(),
-        [this, handler = std::move(handler)](auto&& ec, auto&& bt) mutable {
+    derived().socket().async_wait(std::decay_t<decltype(derived().socket())>::wait_read,
+        [this, handler = std::move(handler)](auto&& ec) mutable {
           on_read_ready(std::move(handler), ec); });
   }
 
   void wait_write_ready() {
     namespace ph = std::placeholders;
 
-    derived().socket().async_write_some(boost::asio::null_buffers(),
+    derived().socket().async_wait(std::decay_t<decltype(derived().socket())>::wait_write,
         std::bind(&socket_operations::on_write_ready, this, ph::_1));
   }
 

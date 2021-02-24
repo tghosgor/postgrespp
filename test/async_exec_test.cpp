@@ -1,6 +1,7 @@
 #include "example_data_fixture.hpp"
 
 #include <async_exec.hpp>
+#include <use_future.hpp>
 
 #include <gtest/gtest.h>
 
@@ -52,6 +53,20 @@ TEST_F(AsyncExec, select_param) {
   run();
 
   ASSERT_EQ(1, num_calls_);
+}
+
+TEST_F(AsyncExec, select_param_future) {
+  auto result_future = async_exec(connection(),
+      "SELECT * FROM " TEST_TABLE " WHERE id = $1",
+      use_future,
+      1);
+
+  run();
+
+  const auto result = result_future.get();
+
+  ASSERT_EQ(result::status_t::TUPLES_OK, result.status());
+  ASSERT_EQ(1, result.size());
 }
 
 TEST_F(AsyncExec, insert_param) {

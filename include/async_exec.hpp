@@ -3,6 +3,8 @@
 #include "work.hpp"
 #include "query.hpp"
 
+#include <boost/asio/async_result.hpp>
+
 #include <memory>
 #include <utility>
 
@@ -12,10 +14,10 @@ namespace postgrespp {
  * Asynchronously executes a query.
  * This function must not be called again before the handler is called.
  */
-template <class RWT, class IsolationT, class TransactionHandlerT, class... Params>
-void async_exec(basic_transaction<RWT, IsolationT>& t, const query& query,
-    TransactionHandlerT&& handler, Params&&... params) {
-  t.async_exec(query, std::move(handler), std::forward<Params>(params)...);
+template <class RWT, class IsolationT, class ResultCallableT, class... Params>
+auto async_exec(basic_transaction<RWT, IsolationT>& t, const query& query,
+    ResultCallableT&& handler, Params&&... params) {
+  return t.async_exec(query, std::forward<ResultCallableT>(handler), std::forward<Params>(params)...);
 }
 
 /**
@@ -23,9 +25,12 @@ void async_exec(basic_transaction<RWT, IsolationT>& t, const query& query,
  * This function must not be called again before the handler is called.
  */
 template <class ResultCallableT, class... Params>
-void async_exec(basic_connection& c, query query,
+auto async_exec(basic_connection& c, query query,
     ResultCallableT&& handler, Params... params) {
-  c.template async_transaction<>([handler = std::move(handler), query = std::move(query),
+  auto initiation = [query = std::move(query), params...](auto&& handler, basic_connection& c) mutable {
+    c.template async_transaction<>([
+      handler = std::move(handler),
+      query = std::move(query),
       params...](auto txn) mutable {
         auto s_txn = std::make_shared<work>(std::move(txn));
 
@@ -47,6 +52,11 @@ void async_exec(basic_connection& c, query query,
         async_exec(*s_txn, query, std::move(wrapped_handler),
             std::move(params)...);
       });
+  };
+
+  return boost::asio::async_initiate<
+    ResultCallableT, void(result)>(
+        initiation, handler, std::ref(c));
 }
 
 }

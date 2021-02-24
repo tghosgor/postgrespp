@@ -59,14 +59,17 @@ public:
   
   /// See \ref async_exec(query, handler, params) for more.
   template <class ResultCallableT>
-  void async_exec(const query_t& query, ResultCallableT&& handler) {
-    async_exec_2(query, std::forward<ResultCallableT>(handler), nullptr, nullptr, nullptr, 0);
+  auto async_exec(const query_t& query, ResultCallableT&& handler) {
+    return async_exec_2(query, std::forward<ResultCallableT>(handler),
+        nullptr, nullptr, nullptr, 0);
   }
 
   /// See \ref async_exec_prepared(statement_name, handler, params) for more.
   template <class ResultCallableT>
-  void async_exec_prepared(const statement_name_t& statement_name, ResultCallableT&& handler) {
-    async_exec_prepared_2(statement_name, std::forward<ResultCallableT>(handler), nullptr, nullptr, nullptr, 0);
+  auto async_exec_prepared(const statement_name_t& statement_name,
+      ResultCallableT&& handler) {
+    return async_exec_prepared_2(statement_name,
+        std::forward<ResultCallableT>(handler), nullptr, nullptr, nullptr, 0);
   }
 
   /**
@@ -79,15 +82,18 @@ public:
    * This function must not be called again before the handler is called.
    */
   template <class ResultCallableT, class... Params>
-  void async_exec(const query_t& query, ResultCallableT&& handler, Params&&... params) {
+  auto async_exec(const query_t& query, ResultCallableT&& handler,
+      Params&&... params) {
     using namespace utility;
 
     const auto value_holders = create_value_holders(params...);
-    const auto value_arr = std::apply([this](auto&&... args) { return value_array(args...); }, value_holders);
+    const auto value_arr = std::apply(
+        [this](auto&&... args) { return value_array(args...); },
+        value_holders);
     const auto size_arr = size_array(params...);
     const auto type_arr = type_array(params...);
 
-    async_exec_2(query, std::forward<ResultCallableT>(handler),
+    return async_exec_2(query, std::forward<ResultCallableT>(handler),
         value_arr.data(), size_arr.data(), type_arr.data(), sizeof...(params));
   }
 
@@ -101,17 +107,20 @@ public:
    * This function must not be called again before the handler is called.
    */
   template <class ResultCallableT, class... Params>
-  void async_exec_prepared(const statement_name_t& statement_name, ResultCallableT&& handler, Params&&... params) {
+  auto async_exec_prepared(const statement_name_t& statement_name,
+      ResultCallableT&& handler, Params&&... params) {
     using namespace utility;
 
     const auto value_holders = create_value_holders(params...);
-    const auto value_arr = std::apply([this](auto&&... args) { return value_array(args...); }, value_holders);
+    const auto value_arr = std::apply(
+        [this](auto&&... args) { return value_array(args...); },
+        value_holders);
     const auto size_arr = size_array(params...);
     const auto type_arr = type_array(params...);
 
-    async_exec_prepared_2(statement_name, std::forward<ResultCallableT>(handler),
-        value_arr.data(),
-        size_arr.data(), type_arr.data(), sizeof...(params));
+    return async_exec_prepared_2(statement_name,
+        std::forward<ResultCallableT>(handler), value_arr.data(),
+        size_arr.data(),type_arr.data(), sizeof...(params));
   }
 
   /**
@@ -125,7 +134,7 @@ public:
    * with a result where \ref result.done() returns true.
    */
   template <class ResultCallableT>
-  void async_exec_all(const query_t& query, ResultCallableT&& handler) {
+  auto async_exec_all(const query_t& query, ResultCallableT&& handler) {
     assert(!done_);
 
     const auto res = PQsendQuery(connection().underlying_handle(),
@@ -136,33 +145,45 @@ public:
         "error executing query: " + std::string{connection().last_error_message()}};
     }
 
-    this->handle_exec_all(std::forward<ResultCallableT>(handler));
+    return this->handle_exec_all(std::forward<ResultCallableT>(handler));
   }
 
   template <class ResultCallableT>
-  void commit(ResultCallableT&& handler) {
-    async_exec("COMMIT", [this, handler = std::move(handler)](auto&& res) mutable {
+  auto commit(ResultCallableT&& handler) {
+    const auto initiation = [this](auto&& handler) {
+      async_exec("COMMIT", [this, handler = std::move(handler)](auto&& res) mutable {
           done_ = true;
           handler(std::forward<decltype(res)>(res));
         });
+    };
+
+    return boost::asio::async_initiate<
+      ResultCallableT, void(result_t)>(
+          initiation, handler);
   }
 
   template <class ResultCallableT>
-  void rollback(ResultCallableT&& handler) {
-    async_exec("ROLLBACK", [this, handler = std::move(handler)](auto&& res) mutable {
+  auto rollback(ResultCallableT&& handler) {
+    const auto initiation = [this](auto&& handler) {
+      async_exec("ROLLBACK", [this, handler = std::move(handler)](auto&& res) mutable {
           done_ = true;
           handler(std::forward<decltype(res)>(res));
         });
+    };
+
+    return boost::asio::async_initiate<
+      ResultCallableT, void(result_t)>(
+          initiation, handler);
   }
 
 protected:
-  auto& socket() { return connection().socket(); }
-
   auto& connection() { return c_.get(); }
+
+  auto& socket() { return connection().socket(); }
 
 private:
   template <class ResultCallableT>
-  void async_exec_2(const query_t& query, ResultCallableT&& handler,
+  auto async_exec_2(const query_t& query, ResultCallableT&& handler,
       const char* const* value_arr, const int* size_arr, const int* type_arr,
       std::size_t num_values) {
     assert(!done_);
@@ -181,11 +202,11 @@ private:
         "error executing query '" + query + "': " + std::string{connection().last_error_message()}};
     }
 
-    this->handle_exec(std::forward<ResultCallableT>(handler));
+    return this->handle_exec(std::forward<ResultCallableT>(handler));
   }
 
   template <class ResultCallableT>
-  void async_exec_prepared_2(const statement_name_t& statement_name,
+  auto async_exec_prepared_2(const statement_name_t& statement_name,
       ResultCallableT&& handler, const char* const* value_arr,
       const int* size_arr, const int* type_arr, std::size_t num_values) {
     assert(!done_);
@@ -203,7 +224,7 @@ private:
         "error executing query '" + statement_name + "': " + std::string{connection().last_error_message()}};
     }
 
-    this->handle_exec(std::forward<ResultCallableT>(handler));
+    return this->handle_exec(std::forward<ResultCallableT>(handler));
   }
 
 private:

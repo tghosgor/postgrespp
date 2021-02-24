@@ -3,6 +3,8 @@
 #include "work.hpp"
 #include "statement_name.hpp"
 
+#include <boost/asio/async_result.hpp>
+
 #include <memory>
 #include <utility>
 
@@ -12,10 +14,10 @@ namespace postgrespp {
  * Asynchronously executes a prepared query.
  * This function must not be called again before the handler is called.
  */
-template <class RWT, class IsolationT, class TransactionHandlerT, class... Params>
-void async_exec_prepared(basic_transaction<RWT, IsolationT>& t, const statement_name& name,
-    TransactionHandlerT&& handler, Params&&... params) {
-  t.async_exec_prepared(name, std::move(handler), std::forward<Params>(params)...);
+template <class RWT, class IsolationT, class ResultCallableT, class... Params>
+auto async_exec_prepared(basic_transaction<RWT, IsolationT>& t, const statement_name& name,
+    ResultCallableT&& handler, Params&&... params) {
+  return t.async_exec_prepared(name, std::forward<ResultCallableT>(handler), std::forward<Params>(params)...);
 }
 
 /**
@@ -24,9 +26,12 @@ void async_exec_prepared(basic_transaction<RWT, IsolationT>& t, const statement_
  * This function must not be called again before the handler is called.
  */
 template <class ResultCallableT, class... Params>
-void async_exec_prepared(basic_connection& c, statement_name name,
+auto async_exec_prepared(basic_connection& c, statement_name name,
     ResultCallableT&& handler, Params... params) {
-  c.template async_transaction<>([handler = std::move(handler), name = std::move(name),
+  auto initiation = [name = std::move(name), params...](auto&& handler, basic_connection& c) mutable {
+   c.template async_transaction<>([
+      handler = std::move(handler),
+      name = std::move(name),
       params...](auto txn) mutable {
         auto s_txn = std::make_shared<work>(std::move(txn));
 
@@ -48,6 +53,11 @@ void async_exec_prepared(basic_connection& c, statement_name name,
         async_exec_prepared(*s_txn, name, std::move(wrapped_handler),
             std::move(params)...);
       });
+  };
+
+  return boost::asio::async_initiate<
+    ResultCallableT, void(result)>(
+        initiation, handler, std::ref(c));
 }
 
 }

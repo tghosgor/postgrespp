@@ -18,3 +18,7 @@ declare_test(connection)
 declare_test(async_exec)
 declare_test(async_exec_prepared)
 declare_test(type_decoder)
+
+if (${CMAKE_CXX_FLAGS} MATCHES -fcoroutines-ts)
+  declare_test(coro)
+endif()

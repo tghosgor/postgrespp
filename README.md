@@ -49,11 +49,17 @@ boost::asio::io_context ioc;
 
 connection c{ioc, "host=127.0.0.1 user=postgres"};
 
+// via callback
 async_exec(c, "SELECT * FROM tbl_test", [](auto&& result) {
   assert(result.ok());
 });
 
+// use_future is also supported
+auto result_future = async_exec(c, "SELECT * FROM tbl_test", use_future);
+
 ioc.run();
+
+assert(result_future.get().ok());
 ```
 
 ```c++
@@ -63,6 +69,7 @@ boost::asio::io_context ioc;
 
 connection c{ioc, "host=127.0.0.1 user=postgres"};
 
+// via callback
 async_exec(c,
   "INSERT INTO tbl_test (si, i, bi) VALUES ($1, $2, $3)",
   [](auto&& result) {
@@ -70,7 +77,15 @@ async_exec(c,
   },
   static_cast<std::int16_t>(1), 2, static_cast<std::int64_t>(3));
 
+// use_future is also supported
+auto result_future = async_exec(c,
+  "INSERT INTO tbl_test (si, i, bi) VALUES ($1, $2, $3)",
+  use_future,
+  static_cast<std::int16_t>(1), 2, static_cast<std::int64_t>(3));
+
 ioc.run();
+
+assert(result_future.get().ok());
 ```
 
 ```c++

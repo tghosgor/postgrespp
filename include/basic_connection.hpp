@@ -10,6 +10,7 @@
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
+#include <stdexcept>
 #include <string>
 #include <utility>
 
@@ -34,7 +35,24 @@ public:
     : basic_connection{standalone_ioc(), pgconninfo} {
   }
 
-  basic_connection(io_context_t& ioc, const char* const& pgconninfo);
+  template <class ExecutorT>
+  basic_connection(ExecutorT& exc, const char* const& pgconninfo)
+    : socket_{exc} {
+    c_ = PQconnectdb(pgconninfo);
+
+    if (status() != CONNECTION_OK)
+      throw std::runtime_error{"could not connect: " + std::string{PQerrorMessage(c_)}};
+
+    if (PQsetnonblocking(c_, 1) != 0)
+      throw std::runtime_error{"could not set non-blocking: " + std::string{PQerrorMessage(c_)}};
+
+    const auto socket = PQsocket(c_);
+
+    if (socket < 0)
+      throw std::runtime_error{"could not get a valid descriptor"};
+
+    socket_.assign(boost::asio::ip::tcp::v4(), socket);
+  }
 
   ~basic_connection();
 
@@ -57,11 +75,11 @@ public:
     return *this;
   }
 
-  template <class ResultCallableT>
-  void async_prepare(
+  template <class CompletionTokenT>
+  auto async_prepare(
       const statement_name_t& statement_name,
       const query_t& query,
-      ResultCallableT&& handler) {
+      CompletionTokenT&& handler) {
     const auto res = PQsendPrepare(connection().underlying_handle(),
         statement_name.c_str(),
         query.c_str(),
@@ -73,7 +91,7 @@ public:
         "error preparing statement '" + statement_name + "': " + std::string{connection().last_error_message()}};
     }
 
-    handle_exec(std::forward<ResultCallableT>(handler));
+    return handle_exec(std::forward<CompletionTokenT>(handler));
   }
 
   /**
@@ -84,10 +102,18 @@ public:
     class Unused_RWT = void,
     class Unused_IsolationT = void,
     class TransactionHandlerT>
-  void async_transaction(TransactionHandlerT&& handler) {
-    auto w = std::make_shared<basic_transaction<Unused_RWT, Unused_IsolationT>>(*this);
-    w->async_exec("BEGIN",
-        [handler = std::move(handler), w](auto&& res) mutable { handler(std::move(*w)); } );
+  auto async_transaction(TransactionHandlerT&& handler) {
+    using txn_t = basic_transaction<Unused_RWT, Unused_IsolationT>;
+
+    auto initiation = [this](auto&& handler) {    
+      auto w = std::make_shared<txn_t>(*this);
+      w->async_exec("BEGIN",
+          [handler = std::move(handler), w](auto&& res) mutable { handler(std::move(*w)); } );
+    };
+
+    return boost::asio::async_initiate<
+      TransactionHandlerT, void(txn_t)>(
+          initiation, handler);
   }
 
   PGconn* underlying_handle() { return c_; }
