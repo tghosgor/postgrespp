@@ -36,4 +36,8 @@ protected:
 
     txn.commit();
   }
+
+protected:
+  const std::size_t num_rows_ = 3;
+  const std::size_t num_columns_ = 5;
 };

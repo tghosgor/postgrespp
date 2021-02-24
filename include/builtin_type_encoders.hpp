@@ -1,5 +1,7 @@
 #pragma once
 
+#include "field_type.hpp"
+
 #include <boost/endian/conversion.hpp>
 
 #include <cstring>
@@ -19,7 +21,7 @@ public:
   }
 
   static constexpr int type(const std::string& t) {
-    return 0;
+    return static_cast<int>(field_type::TEXT);
   }
 
   value_t to_text_value(const std::string& t) {
@@ -43,7 +45,7 @@ public:
   }
 
   static constexpr int type(const char* const& t) {
-    return 0;
+    return static_cast<int>(field_type::TEXT);
   }
 
   value_t to_text_value(const char* const& t) {
@@ -66,7 +68,7 @@ public:
   }
 
   static constexpr int type(const T& t) {
-    return 1;
+    return static_cast<int>(field_type::BINARY);
   }
 
   value_t to_text_value(const T& t) {

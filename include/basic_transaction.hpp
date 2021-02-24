@@ -1,5 +1,6 @@
 #pragma once
 
+#include "field_type.hpp"
 #include "query.hpp"
 #include "socket_operations.hpp"
 #include "type_encoder.hpp"
@@ -173,7 +174,7 @@ private:
         value_arr,
         size_arr,
         type_arr,
-        1);
+        static_cast<int>(field_type::BINARY));
 
     if (res != 1) {
       throw std::runtime_error{

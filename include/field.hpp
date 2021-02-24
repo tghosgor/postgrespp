@@ -22,10 +22,17 @@ public:
 
   template <class T>
   T as() const {
-    if (PQgetlength(res_, row_, col_) != sizeof(T))
-      throw std::length_error{"field length and sizeof(T) are different"};
+    using decoder_t = type_decoder<T>;
 
-    type_decoder<T> decoder{};
+    if (!decoder_t::nullable && is_null())
+      throw std::length_error{"field is null"};
+
+    const auto field_length = PQgetlength(res_, row_, col_);
+    if (!(field_length == 0 && decoder_t::nullable) &&
+        field_length < decoder_t::min_size || field_length > decoder_t::max_size)
+      throw std::length_error{"field length " + std::to_string(field_length) + " not in range " +
+        std::to_string(decoder_t::min_size) + "-" +
+        std::to_string(decoder_t::max_size)};
 
     return unsafe_as<T>();
   }
@@ -42,7 +49,7 @@ public:
   T unsafe_as() const {
     type_decoder<T> decoder{};
 
-    return decoder.from_binary(PQgetvalue(res_, row_, col_));
+    return decoder.from_binary(PQgetvalue(res_, row_, col_), PQgetlength(res_, row_, col_));
   }
 
   template <class T>
