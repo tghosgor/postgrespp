@@ -20,7 +20,8 @@ protected:
     pqxx::work txn{c};
 
     txn.exec("DROP TABLE IF EXISTS " TEST_TABLE);
-    txn.exec("CREATE TABLE " TEST_TABLE " (id serial NOT NULL, si smallint, i int, bi bigint, t text)");
+    txn.exec("CREATE UNLOGGED TABLE " TEST_TABLE
+        " (id serial NOT NULL, si smallint, i int, bi bigint, t text)");
     txn.exec("INSERT INTO " TEST_TABLE " (si, i, bi, t) VALUES (10, 20, 40, 'row 0')");
     txn.exec("INSERT INTO " TEST_TABLE " (si, i, bi, t) VALUES (11, 22, 44, 'row 1')");
     txn.exec("INSERT INTO " TEST_TABLE " (si, i, bi, t) VALUES (NULL, NULL, NULL, NULL)");
