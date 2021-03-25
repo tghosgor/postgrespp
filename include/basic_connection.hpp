@@ -105,7 +105,7 @@ public:
   auto async_transaction(TransactionHandlerT&& handler) {
     using txn_t = basic_transaction<Unused_RWT, Unused_IsolationT>;
 
-    auto initiation = [this](auto&& handler) {    
+    auto initiation = [this](auto&& handler) {
       auto w = std::make_shared<txn_t>(*this);
       w->async_exec("BEGIN",
           [handler = std::move(handler), w](auto&& res) mutable { handler(std::move(*w)); } );

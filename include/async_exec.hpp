@@ -27,16 +27,19 @@ auto async_exec(basic_transaction<RWT, IsolationT>& t, const query& query,
 template <class ResultCallableT, class... Params>
 auto async_exec(basic_connection& c, query query,
     ResultCallableT&& handler, Params... params) {
-  auto initiation = [query = std::move(query), params...](auto&& handler, basic_connection& c) mutable {
+  auto initiation = [](auto&& handler, basic_connection& c,
+      ::postgrespp::query query, auto&&... params) mutable {
     c.template async_transaction<>([
       handler = std::move(handler),
       query = std::move(query),
       params...](auto txn) mutable {
-        auto s_txn = std::make_shared<work>(std::move(txn));
+        auto ptxn = std::make_unique<work>(std::move(txn));
+        auto& txn_ref = *ptxn;
 
-        auto wrapped_handler = [handler = std::move(handler), s_txn](auto&& result) mutable {
+        auto wrapped_handler = [handler = std::move(handler), ptxn = std::move(ptxn)](auto&& result) mutable {
             if (result.ok()) {
-              s_txn->commit([s_txn, handler = std::move(handler), result = std::move(result)]
+              auto& txn_ref = *ptxn;
+              txn_ref.commit([ptxn = std::move(ptxn), handler = std::move(handler), result = std::move(result)]
                             (auto&& commit_result) mutable {
                   if (commit_result.ok()) {
                     handler(std::move(result));
@@ -49,14 +52,14 @@ auto async_exec(basic_connection& c, query query,
             }
           };
 
-        async_exec(*s_txn, query, std::move(wrapped_handler),
+        async_exec(txn_ref, query, std::move(wrapped_handler),
             std::move(params)...);
       });
   };
 
   return boost::asio::async_initiate<
     ResultCallableT, void(result)>(
-        initiation, handler, std::ref(c));
+        initiation, handler, std::ref(c), std::move(query), std::forward<decltype(params)>(params)...);
 }
 
 }

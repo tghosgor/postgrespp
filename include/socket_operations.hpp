@@ -83,6 +83,7 @@ private:
   void on_read_ready(ResultCallableT&& handler, const error_code_t& ec) {
     while (true) {
       if (PQconsumeInput(derived().connection().underlying_handle()) != 1) {
+        // TODO: convert this to some kind of error via the callback
         throw std::runtime_error{
           "consume input failed: " + std::string{derived().connection().last_error_message()}};
       }
@@ -106,6 +107,7 @@ private:
           }
         }
       } else {
+        // TODO: convert this to some kind of error via the callback
         throw std::runtime_error{
           "flush failed: " + std::string{derived().connection().last_error_message()}};
       }
@@ -117,6 +119,7 @@ private:
     if (ret == 1) {
       wait_write_ready();
     } else if (ret != 0) {
+      // TODO: ignore or convert this to some kind of error via the callback
       throw std::runtime_error{
         "flush failed: " + std::string{derived().connection().last_error_message()}};
     }

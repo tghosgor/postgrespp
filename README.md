@@ -95,7 +95,7 @@ boost::asio::io_context ioc;
 
 connection c{ioc, "host=127.0.0.1 user=postgres"};
 
-c.transaction<>([](auto txn) {
+c.async_transaction<>([](auto txn) {
   // move transaction into a std::shared_ptr to keep it alive in lambdas.
   auto shared_txn = std::make_shared<work>(std::move(txn));
 
