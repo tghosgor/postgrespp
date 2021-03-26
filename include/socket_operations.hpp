@@ -6,6 +6,7 @@
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/error.hpp>
 
+#include <libpq-fe.h>
 #include <stdexcept>
 
 namespace postgrespp {
@@ -26,6 +27,12 @@ protected:
 protected:
   socket_operations() = default;
 
+  socket_operations(const socket_operations&) = delete;
+  socket_operations(socket_operations&&) = default;
+
+  socket_operations& operator=(const socket_operations&) = delete;
+  socket_operations& operator=(socket_operations&&) = default;
+
   ~socket_operations() = default;
 
   template <class ResultCallableT>
@@ -41,8 +48,8 @@ protected:
         }
       };
 
+      on_write_ready({});
       wait_read_ready(std::move(wrapped_handler));
-      wait_write_ready();
     };
 
     return boost::asio::async_initiate<
@@ -53,8 +60,8 @@ protected:
   template <class ResultCallableT>
   auto handle_exec_all(ResultCallableT&& handler) {
     auto initiation = [this](auto&& handler) {
-      wait_read_ready(std::forward<ResultCallableT>(handler));
-      wait_write_ready();
+      on_write_ready({});
+      wait_read_ready(std::move(handler));
     };
 
     return boost::asio::async_initiate<
@@ -65,8 +72,6 @@ protected:
 private:
   template <class ResultCallableT>
   void wait_read_ready(ResultCallableT&& handler) {
-    namespace ph = std::placeholders;
-
     derived().socket().async_wait(std::decay_t<decltype(derived().socket())>::wait_read,
         [this, handler = std::move(handler)](auto&& ec) mutable {
           on_read_ready(std::move(handler), ec); });
@@ -88,28 +93,18 @@ private:
           "consume input failed: " + std::string{derived().connection().last_error_message()}};
       }
 
-      const auto flush = PQflush(derived().connection().underlying_handle());
-      if (flush == 1) {
-        wait_read_ready(std::forward<ResultCallableT>(handler));
-        break;
-      } else if (flush == 0) {
-        if (PQisBusy(derived().connection().underlying_handle()) == 1) {
-          wait_read_ready(std::forward<ResultCallableT>(handler));
+      if (!PQisBusy(derived().connection().underlying_handle())) {
+        const auto pqres = PQgetResult(derived().connection().underlying_handle());
+
+        result res{pqres};
+        handler(std::move(res));
+
+        if (!pqres) {
           break;
-        } else {
-          const auto pqres = PQgetResult(derived().connection().underlying_handle());
-
-          result res{pqres};
-          handler(std::move(res));
-
-          if (!pqres) {
-            break;
-          }
         }
       } else {
-        // TODO: convert this to some kind of error via the callback
-        throw std::runtime_error{
-          "flush failed: " + std::string{derived().connection().last_error_message()}};
+        wait_read_ready(std::forward<ResultCallableT>(handler));
+        break;
       }
     }
   }
