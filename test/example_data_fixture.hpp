@@ -21,10 +21,10 @@ protected:
 
     txn.exec("DROP TABLE IF EXISTS " TEST_TABLE);
     txn.exec("CREATE UNLOGGED TABLE " TEST_TABLE
-        " (id serial NOT NULL, si smallint, i int, bi bigint, t text)");
-    txn.exec("INSERT INTO " TEST_TABLE " (si, i, bi, t) VALUES (10, 20, 40, 'row 0')");
-    txn.exec("INSERT INTO " TEST_TABLE " (si, i, bi, t) VALUES (11, 22, 44, 'row 1')");
-    txn.exec("INSERT INTO " TEST_TABLE " (si, i, bi, t) VALUES (NULL, NULL, NULL, NULL)");
+        " (id serial NOT NULL, si smallint, i int, bi bigint, t text, r real, d double precision)");
+    txn.exec("INSERT INTO " TEST_TABLE " (si, i, bi, t, r, d) VALUES (10, 20, 40, 'row 0', 1.5, 3.5)");
+    txn.exec("INSERT INTO " TEST_TABLE " (si, i, bi, t, r, d) VALUES (11, 22, 44, 'row 1', 2.5, 6.5)");
+    txn.exec("INSERT INTO " TEST_TABLE " (si, i, bi, t, r, d) VALUES (NULL, NULL, NULL, NULL, NULL, NULL)");
 
     txn.commit();
   }

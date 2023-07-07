@@ -48,4 +48,19 @@ public:
   }
 };
 
+template <class T>
+class type_decoder<T, std::enable_if_t<std::is_floating_point_v<T>>> {
+public:
+  static constexpr std::size_t min_size = sizeof(T);
+  static constexpr std::size_t max_size = sizeof(T);
+  static constexpr bool nullable = false;
+
+public:
+  T from_binary(const char* data, std::size_t length) {
+    using namespace boost::endian;
+
+    return endian_load<T, sizeof(T), order::big>(reinterpret_cast<unsigned const char*>(data));
+  }
+};
+
 }

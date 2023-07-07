@@ -80,4 +80,35 @@ public:
   }
 };
 
+template <class T>
+class type_encoder<T, std::enable_if_t<std::is_floating_point_v<T>>> {
+public:
+  using value_t = T;
+
+public:
+  static std::size_t size(const T& t) {
+    return sizeof(t);
+  }
+
+  static constexpr int type(const T& t) {
+    return static_cast<int>(field_type::BINARY);
+  }
+
+  value_t to_text_value(const T& t) {
+    using namespace boost::endian;
+
+    value_t v;
+
+    static_assert(sizeof(v) == sizeof(t), "expected equal");
+    endian_store<T, sizeof(T), order::big>(
+        reinterpret_cast<unsigned char*>(&v), t);
+
+    return v;
+  }
+
+  const char* c_str(const T& t) {
+    return reinterpret_cast<const char*>(&t);
+  }
+};
+
 }

@@ -100,3 +100,31 @@ TEST_F(TypeDecoderTest, std_optional_integral) {
 
   ASSERT_EQ(1, num_calls_);
 }
+
+TEST_F(TypeDecoderTest, std_optional_floating_point) {
+  connection().async_transaction<>([&](auto txn) {
+        auto shared_txn = std::make_shared<work>(std::move(txn));
+
+        shared_txn->async_exec(
+            "INSERT INTO " TEST_TABLE " (r, d) VALUES ($1, $2)",
+            [&, shared_txn](auto&& result) {
+              shared_txn->async_exec(
+                  "SELECT * FROM " TEST_TABLE,
+                  wrap_handler([&, shared_txn](auto result) {
+                    ASSERT_FLOAT_EQ(1.5, result.at(0).at(5).template as<std::optional<float>>().value());
+                    ASSERT_FLOAT_EQ(3.5, result.at(0).at(6).template as<std::optional<double>>().value());
+                    ASSERT_FALSE(result.at(2).at(5).template as<std::optional<float>>().has_value());
+
+                    const auto& last_row = result.size() - 1;
+                    ASSERT_FLOAT_EQ(12.5, result.at(last_row).at(5).template as<std::optional<float>>().value());
+                    ASSERT_FLOAT_EQ(32.5, result.at(last_row).at(6).template as<std::optional<double>>().value());
+                  }));
+            },
+            12.5f,
+            32.5);
+      });
+
+  run();
+
+  ASSERT_EQ(1, num_calls_);
+}
