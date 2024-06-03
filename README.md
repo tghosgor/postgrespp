@@ -10,14 +10,14 @@ the libpqxx interface _very_ loosely.
 
 ## Safer & Easier
 
-It uses the power of c++11 variadic templates in conjunction with
+It takes advantage of c++11 variadic templates in conjunction with
 PQsendQueryParam. This makes the library both easier and safer to use.
 
 ## Requirements
 
 ### c++17
 
-The library currently requires c++17 standard. It makes little use of c++17
+The library currently requires the c++17 standard. It makes little use of c++17
 features as of writing this so it should be relatively simple to port it to c++14
 or c++11.
 
@@ -31,6 +31,8 @@ Some of the boost libaries are used such as boost.asio and boost.endian. Their
 usage is not heavy and I believe all of the boost can be replaced without much
 effort. As an improvement, maybe socket ready signal interface can be abstracted
 to allow users to plug their own versions via templates.
+
+Through proper integration with boost.asio, the interface that this library provides can also be used with c++ coroutines just like any other boost.asio interface!
 
 ### cmake
 
